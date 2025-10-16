@@ -3,7 +3,7 @@ name: Resgatar Moedas AliExpress
 
 on:
   schedule:
-    # Todo dia às 10:00 UTC (07:00 horário de Brasília)
+    # Executa todo dia às 10:00 UTC (07:00 horário de Brasília)
     - cron: '0 10 * * *'
   workflow_dispatch: # Permite execução manual
 
@@ -22,13 +22,17 @@ jobs:
 
     - name: Instalar dependências
       run: |
-        npm install puppeteer
-        npm install puppeteer-extra
-        npm install puppeteer-extra-plugin-stealth
+        npm install puppeteer-extra puppeteer-extra-plugin-stealth
 
-    - name: Executar script de automação
-      run: |
-       node scripts/debug-detailed.js
+    - name: Executar automação
+      run: node scripts/automacao-final.js
       env:
         ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
         ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
+
+    - name: Upload screenshots (opcional)
+      uses: actions/upload-artifact@v4
+      with:
+        name: screenshots
+        path: "*.png"
+        retention-days: 1
