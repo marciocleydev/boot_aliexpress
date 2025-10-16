@@ -38,7 +38,7 @@ async function botRapido() {
       const type = await input.evaluate(el => el.type);
       
       if ((type === 'email' || type === 'text') && !emailPreenchido) {
-        await input.type('marciocley100@gmail.com', { delay: 150 });
+        await input.type('marciocleydev@gmail.com', { delay: 150 });
         emailPreenchido = true;
         console.log('✅ Email digitado...');
         
