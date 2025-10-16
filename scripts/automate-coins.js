@@ -3,6 +3,9 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 
+// Função de delay compatível
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function resgatarMoedas() {
   const browser = await puppeteer.launch({
     headless: true,
@@ -17,132 +20,102 @@ async function resgatarMoedas() {
   const page = await browser.newPage();
   
   try {
-    // Configurar headers para parecer mais humano
+    // Configurar headers
     await page.setExtraHTTPHeaders({
-      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
     });
 
-    // **CORREÇÃO: Usar URL internacional em vez da portuguesa**
-    console.log('🌐 Acessando AliExpress internacional...');
+    console.log('🌐 Acessando AliExpress...');
     await page.goto('https://www.aliexpress.com', { 
       waitUntil: 'networkidle2',
       timeout: 30000 
     });
 
-    // Verificar se não é página de erro
-    const title = await page.title();
-    console.log('📄 Título da página:', title);
+    console.log('📄 Título:', await page.title());
+    await page.screenshot({ path: '1-pagina-inicial.png' });
 
-    if (title.includes('404') || title.includes('Error')) {
-      throw new Error('Página de erro detectada');
-    }
-
-    await page.screenshot({ path: 'pagina-inicial.png' });
-
-    // **Tentar login diretamente na página internacional**
-    console.log('🔐 Tentando fazer login...');
+    // **Fazer login**
+    console.log('🔐 Clicando no login...');
     
-    // Procurar botão de login na página internacional
+    // Tentar diferentes seletores de login
     const loginSelectors = [
-      'a[href*="member/union/login"]',
       '[data-role="sign-link"]',
       '.sign-in',
-      '.login',
       'a[href*="login"]',
-      'button[data-role="sign-link"]'
+      '.login-link',
+      'span:has-text("Sign in")',
+      'a:has-text("Sign in")'
     ];
 
     let loginClicked = false;
     for (const selector of loginSelectors) {
-      const loginBtn = await page.$(selector);
-      if (loginBtn) {
-        console.log(`✅ Clicando no login: ${selector}`);
-        await loginBtn.click();
+      try {
+        await page.waitForSelector(selector, { timeout: 5000 });
+        await page.click(selector);
+        console.log(`✅ Login clicado: ${selector}`);
         loginClicked = true;
-        await page.waitForTimeout(5000);
+        await delay(5000);
         break;
+      } catch (e) {
+        // Continuar para próximo seletor
       }
     }
 
     if (!loginClicked) {
-      console.log('🚀 Tentando acesso direto ao login...');
+      console.log('🚀 Indo para página de login direto...');
       await page.goto('https://login.aliexpress.com/', {
-        waitUntil: 'networkidle2',
-        timeout: 30000
+        waitUntil: 'networkidle2'
       });
     }
 
-    // Aguardar e preencher formulário de login
-    console.log('⌛ Aguardando formulário de login...');
+    // Preencher formulário de login
+    console.log('⌛ Aguardando formulário...');
     
     try {
       await page.waitForSelector('#fm-login-id', { timeout: 10000 });
       
-      console.log('📝 Preenchendo email...');
-      await page.type('#fm-login-id', process.env.ALIEXPRESS_EMAIL, { delay: 150 });
+      console.log('📝 Preenchendo credenciais...');
+      await page.type('#fm-login-id', process.env.ALIEXPRESS_EMAIL, { delay: 100 });
+      await page.type('#fm-login-password', process.env.ALIEXPRESS_PASSWORD, { delay: 100 });
       
-      console.log('📝 Preenchendo senha...');
-      await page.type('#fm-login-password', process.env.ALIEXPRESS_PASSWORD, { delay: 150 });
-      
-      console.log('🖱️ Clicando no botão de login...');
+      console.log('🖱️ Submetendo login...');
       await page.click('button[type="submit"]');
       
-      // Aguardar login (pode redirecionar ou não)
-      await page.waitForTimeout(8000);
-      
-      // Verificar se login foi bem sucedido
-      await page.screenshot({ path: 'pos-login.png' });
+      await delay(8000);
+      await page.screenshot({ path: '2-pos-login.png' });
       
     } catch (loginError) {
-      console.log('❌ Formulário de login não apareceu:', loginError.message);
+      console.log('❌ Erro no login:', loginError.message);
       await page.screenshot({ path: 'erro-login.png' });
     }
 
-    // **Tentar acessar página de moedas de diferentes formas**
-    console.log('🪙 Tentando acessar página de moedas...');
+    // **Acessar página de moedas**
+    console.log('🪙 Acessando página de moedas...');
     
-    const coinUrls = [
-      'https://www.aliexpress.com/coin/task',
-      'https://activities.aliexpress.com/coin/task.php',
-      'https://portuguese.aliexpress.com/coin/task'
-    ];
-
-    let coinsAccessed = false;
-    
-    for (const coinUrl of coinUrls) {
-      try {
-        console.log(`🔗 Tentando: ${coinUrl}`);
-        await page.goto(coinUrl, {
-          waitUntil: 'networkidle2',
-          timeout: 20000
-        });
-        
-        const currentTitle = await page.title();
-        console.log(`📄 Título atual: ${currentTitle}`);
-        
-        if (!currentTitle.includes('404') && !currentTitle.includes('Error')) {
-          console.log(`✅ Página acessada com sucesso: ${coinUrl}`);
-          coinsAccessed = true;
-          break;
-        }
-      } catch (error) {
-        console.log(`❌ Falha ao acessar ${coinUrl}: ${error.message}`);
-      }
+    try {
+      await page.goto('https://www.aliexpress.com/coin/task', {
+        waitUntil: 'networkidle2',
+        timeout: 20000
+      });
+      
+      console.log('📄 Título moedas:', await page.title());
+      await delay(5000);
+      await page.screenshot({ path: '3-pagina-moedas.png' });
+      
+    } catch (coinError) {
+      console.log('❌ Erro ao acessar moedas:', coinError.message);
+      
+      // Tentar URL alternativa
+      console.log('🔄 Tentando URL alternativa...');
+      await page.goto('https://activities.aliexpress.com/coin/task.php', {
+        waitUntil: 'networkidle2'
+      });
+      await delay(5000);
+      await page.screenshot({ path: '4-moedas-alternativa.png' });
     }
 
-    if (!coinsAccessed) {
-      console.log('❌ Não foi possível acessar página de moedas');
-      await page.screenshot({ path: 'erro-moedas.png' });
-      return;
-    }
-
-    // Aguardar carregamento completo
-    await page.waitForTimeout(5000);
-    await page.screenshot({ path: 'pagina-moedas.png' });
-
-    // **Buscar botões de resgate**
-    console.log('🔍 Procurando botões de resgate...');
+    // **Resgatar moedas**
+    console.log('🔍 Procurando botões...');
     
     const coinSelectors = [
       '.coin-task-claim',
@@ -152,40 +125,47 @@ async function resgatarMoedas() {
       '.next-btn-primary',
       '.btn-claim',
       '[data-role="claim"]',
-      'button:not([disabled])'
+      'button'
     ];
 
     let moedasResgatadas = 0;
     
     for (const selector of coinSelectors) {
-      try {
-        const buttons = await page.$$(selector);
-        console.log(`🔍 Encontrados ${buttons.length} botões com: ${selector}`);
-        
-        for (let i = 0; i < buttons.length; i++) {
-          try {
-            const buttonText = await buttons[i].evaluate(btn => btn.textContent?.trim() || '');
-            
-            // Verificar se é um botão de resgate
-            if (buttonText.includes('Claim') || buttonText.includes('Resgatar') || 
-                buttonText.includes('Receber') || buttonText.includes('Coins')) {
+      const buttons = await page.$$(selector);
+      console.log(`🔍 ${buttons.length} botões com: ${selector}`);
+      
+      for (let i = 0; i < buttons.length; i++) {
+        try {
+          const button = buttons[i];
+          const isVisible = await button.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            return el.offsetWidth > 0 && 
+                   el.offsetHeight > 0 && 
+                   !el.disabled &&
+                   style.visibility !== 'hidden' &&
+                   style.display !== 'none';
+          });
+          
+          if (isVisible) {
+            const text = await button.evaluate(el => el.textContent?.trim() || '');
+            if (text && (text.includes('Claim') || text.includes('Resgatar') || 
+                         text.includes('Receber') || text.includes('Coins') ||
+                         text.includes('Get') || text.match(/\d+/))) {
               
-              console.log(`🖱️ Clicando no botão: "${buttonText}"`);
-              await buttons[i].click();
+              console.log(`🖱️ Clicando: "${text.substring(0, 30)}"`);
+              await button.click();
               moedasResgatadas++;
-              await page.waitForTimeout(4000);
+              await delay(3000);
             }
-          } catch (clickError) {
-            console.log(`❌ Erro ao clicar: ${clickError.message}`);
           }
+        } catch (error) {
+          console.log(`❌ Erro no botão ${i}:`, error.message);
         }
-      } catch (error) {
-        // Ignorar seletores não encontrados
       }
     }
 
-    console.log(`🎉 Concluído! ${moedasResgatadas} moedas resgatadas.`);
-    await page.screenshot({ path: 'resultado-final.png' });
+    console.log(`🎉 Finalizado! ${moedasResgatadas} ações realizadas.`);
+    await page.screenshot({ path: '5-resultado-final.png' });
 
   } catch (error) {
     console.error('💥 Erro geral:', error);
