@@ -1,16 +1,16 @@
-// bot-rapido.js - VERSÃO CORRIGIDA
+// bot-rapido-mobile-corrigido.js
 const puppeteer = require('puppeteer-core');
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-console.log('🚀 BOT CORRIGIDO - Buscando inputs novamente...');
+console.log('🚀 BOT MOBILE CORRIGIDO - Janela redimensionada');
 
 async function botRapido() {
   const browser = await puppeteer.launch({
     headless: false,
     executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     defaultViewport: null,
-    args: ['--start-maximized']
+    args: ['--window-size=390,844'] // 🔥 FORÇAR tamanho da janela
   });
 
   const page = await browser.newPage();
@@ -75,7 +75,6 @@ async function botRapido() {
 
     console.log('4. 🔐 BUSCANDO INPUTS NOVAMENTE para senha...');
     
-    // 🔥 CORREÇÃO: Buscar os inputs NOVAMENTE após o campo de senha aparecer
     const inputsAtualizados = await page.$$('input');
     let senhaPreenchida = false;
     
@@ -92,9 +91,6 @@ async function botRapido() {
 
     if (!senhaPreenchida) {
       console.log('❌ Campo de senha não encontrado após busca renovada');
-      console.log('💡 Vamos tentar uma abordagem alternativa...');
-      
-      // Tentativa alternativa: usar seletores CSS
       await page.type('input[type="password"]', 'Aliexpress@81050050', { delay: 100 });
       console.log('✅ Senha preenchida via seletor CSS');
     }
@@ -103,7 +99,6 @@ async function botRapido() {
 
     console.log('5. 🖱️ Clicando no botão Sign In...');
     
-    // Resto do código permanece igual...
     const signInClicado = await page.evaluate(() => {
       const botoes = document.querySelectorAll('button');
       
@@ -134,32 +129,70 @@ async function botRapido() {
     console.log('⏳ Aguardando login completar... 10 segundos');
     await delay(10000);
 
-    console.log('6. 🪙 Indo para página de moedas...');
-    await page.goto('https://m.aliexpress.com/p/coin-index/index.html?utm=botdoafiliado&_immersiveMode=true&from=syicon&t=botmoedas&tt=CPS_NORMAL');
-
-    console.log('✅ Página de moedas carregada!');
-    await delay(3000);
-
-    console.log('7. 🔄 Resgatando moedas...');
+    console.log('6. 📱 REDIMENSIONANDO JANELA PARA MOBILE...');
     
-    const botoesClicados = await page.evaluate(() => {
-      const botoes = document.querySelectorAll('button');
-      const resultados = [];
-      
-      botoes.forEach(botao => {
-        if (botao.offsetWidth > 0 && botao.offsetHeight > 0) {
-          const texto = botao.textContent?.trim();
-          if (texto && (/^\d+$/.test(texto) || texto.toLowerCase().includes('claim'))) {
-            resultados.push(texto);
-            botao.click();
-          }
-        }
-      });
-      
-      return resultados;
+    // 🔥 REDIMENSIONAR A JANELA INTEIRA
+    await page.setViewport({ width: 390, height: 844 });
+    // Forçar redimensionamento da janela do navegador
+    await page.evaluate(() => {
+      window.resizeTo(390, 844);
+    });
+    
+    // Configurar como mobile
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1');
+    
+    console.log('✅ Janela redimensionada para mobile!');
+
+    console.log('7. 🪙 Indo para página de moedas MOBILE...');
+    await page.goto('https://m.aliexpress.com/p/coin-index/index.html?utm=botdoafiliado&_immersiveMode=true&from=syicon&t=botmoedas&tt=CPS_NORMAL', {
+      waitUntil: 'networkidle2',
+      timeout: 15000
     });
 
-    console.log(`🎯 ${botoesClicados.length} moedas resgatadas:`, botoesClicados);
+    console.log('✅ Página de moedas MOBILE carregada!');
+    await delay(5000);
+
+    // 🔥 TENTAR VÁRIAS VEZES - as moedas podem carregar dinamicamente
+    console.log('8. 🔄 Procurando moedas para resgatar...');
+    
+    let totalMoedas = 0;
+    
+    // Tentar várias vezes com scroll
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      console.log(`🔄 Tentativa ${tentativa} de encontrar moedas...`);
+      
+      const moedasEncontradas = await page.evaluate(() => {
+        const botoes = document.querySelectorAll('button');
+        const resultados = [];
+        
+        botoes.forEach(botao => {
+          if (botao.offsetWidth > 0 && botao.offsetHeight > 0) {
+            const texto = botao.textContent?.trim();
+            // Capturar botões com números (moedas) ou "claim"
+            if (texto && (/^\d+$/.test(texto) || texto.toLowerCase().includes('claim') || texto.includes('Ganhe'))) {
+              resultados.push(texto);
+              botao.click();
+            }
+          }
+        });
+        
+        return resultados;
+      });
+      
+      totalMoedas += moedasEncontradas.length;
+      console.log(`🎯 ${moedasEncontradas.length} moedas encontradas nesta tentativa:`, moedasEncontradas);
+      
+      if (moedasEncontradas.length > 0) {
+        await delay(3000); // Esperar processamento
+      }
+      
+      // Fazer scroll para carregar mais conteúdo
+      await page.evaluate(() => window.scrollBy(0, 300));
+      await delay(2000);
+    }
+
+    console.log(`🎉 TOTAL: ${totalMoedas} moedas resgatadas!`);
+    
     await delay(5000);
 
     console.log('🎉 🎉 🎉 SUCESSO TOTAL!');
