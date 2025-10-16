@@ -1,10 +1,11 @@
+// scripts/script-basico.js
 const puppeteer = require('puppeteer');
 
 async function automacaoBasica() {
   console.log('🚀 Iniciando automação AliExpress...');
   
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: "new",  // Modo novo do Chrome
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
 
@@ -21,47 +22,107 @@ async function automacaoBasica() {
     const titulo = await page.title();
     console.log('✅ Página carregada:', titulo);
     
-    // Screenshot da página inicial
     await page.screenshot({ path: 'passo1-inicio.png' });
     
-    // 2. Tentar acessar página de moedas
-    console.log('2. 🪙 Tentando acessar página de moedas...');
-    await page.goto('https://www.aliexpress.com/coin/task', {
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    });
+    // 2. Tentar URLs ALTERNATIVAS para moedas
+    console.log('2. 🪙 Tentando diferentes URLs de moedas...');
     
-    await page.waitForTimeout(5000);
-    const tituloMoedas = await page.title();
-    console.log('📄 Título da página de moedas:', tituloMoedas);
+    const urlsMoedas = [
+      'https://activities.aliexpress.com/coin/task.php',
+      'https://www.aliexpress.com/activities/coin/index.html',
+      'https://portuguese.aliexpress.com/coin/task',
+      'https://app.aliexpress.com/coin/task'
+    ];
     
-    await page.screenshot({ path: 'passo2-moedas.png' });
+    let urlFuncionou = false;
     
-    // 3. Verificar se está logado
-    if (tituloMoedas.includes('Login') || tituloMoedas.includes('Sign')) {
-      console.log('🔐 Precisa fazer login...');
-    } else {
-      console.log('✅ Possivelmente já está logado!');
+    for (const url of urlsMoedas) {
+      try {
+        console.log(`   🔗 Tentando: ${url}`);
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 10000 });
+        
+        const titulo = await page.title();
+        console.log(`   📄 Título: ${titulo}`);
+        
+        // Se não é página de erro, assumimos que funcionou
+        if (!titulo.includes('404') && !titulo.includes('Error') && !titulo.includes('Not Found')) {
+          console.log(`   ✅ URL funcionou: ${url}`);
+          urlFuncionou = true;
+          await page.screenshot({ path: 'passo2-moedas-encontrada.png' });
+          break;
+        }
+      } catch (error) {
+        console.log(`   ❌ URL falhou: ${url}`);
+      }
+    }
+    
+    if (!urlFuncionou) {
+      console.log('❌ Nenhuma URL de moedas funcionou');
       
-      // 4. Tentar clicar em botões de "Claim"
-      console.log('3. 🔄 Procurando botões para clicar...');
+      // Tentar buscar link de moedas na página principal
+      console.log('3. 🔍 Procurando link de moedas na página principal...');
+      await page.goto('https://www.aliexpress.com', { waitUntil: 'networkidle2' });
+      
+      const linkMoedas = await page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll('a'));
+        for (let link of links) {
+          const href = link.href;
+          const texto = link.textContent?.toLowerCase();
+          if (href && (href.includes('coin') || href.includes('points') || 
+                       texto?.includes('coin') || texto?.includes('point'))) {
+            return href;
+          }
+        }
+        return null;
+      });
+      
+      if (linkMoedas) {
+        console.log(`🔗 Link de moedas encontrado: ${linkMoedas}`);
+        await page.goto(linkMoedas, { waitUntil: 'networkidle2' });
+        await page.screenshot({ path: 'passo3-moedas-link.png' });
+        urlFuncionou = true;
+      }
+    }
+    
+    if (urlFuncionou) {
+      // 3. Procurar botões de forma MAIS AGRESSIVA
+      console.log('4. 🔄 Procurando botões PARA RESGATAR...');
+      await page.waitForTimeout(5000);
       
       const botoesClicados = await page.evaluate(() => {
         const resultados = [];
-        const botoes = document.querySelectorAll('button');
         
-        botoes.forEach(botao => {
-          if (botao.offsetWidth > 0 && botao.offsetHeight > 0) {
-            const texto = botao.textContent?.trim().toLowerCase();
-            if (texto && (texto.includes('claim') || 
-                         texto.includes('resgatar') ||
-                         texto.includes('get') ||
-                         /^\d+$/.test(texto))) {
-              resultados.push(texto);
+        // Buscar TODOS os elementos clicáveis
+        const elementos = document.querySelectorAll('button, .btn, [class*="button"], [role="button"], a');
+        
+        elementos.forEach(elemento => {
+          if (elemento.offsetWidth > 0 && elemento.offsetHeight > 0 && !elemento.disabled) {
+            const texto = elemento.textContent?.trim().toLowerCase();
+            
+            // Critérios MAIS AMPLOS para botões de moedas
+            if (texto && (
+              texto.includes('claim') || 
+              texto.includes('resgatar') ||
+              texto.includes('receber') ||
+              texto.includes('get') ||
+              texto.includes('collect') ||
+              texto.includes('coin') ||
+              texto.includes('point') ||
+              /^\d+$/.test(texto) || // Apenas números
+              texto.includes('daily') ||
+              texto.includes('check-in') ||
+              (texto.length <= 4 && !isNaN(parseInt(texto))) // Números curtos
+            )) {
+              resultados.push({
+                texto: elemento.textContent?.trim(),
+                tag: elemento.tagName
+              });
+              
               try {
-                botao.click();
+                elemento.click();
               } catch (e) {
-                // Ignorar erros de clique
+                // Tentar método alternativo
+                elemento.dispatchEvent(new MouseEvent('click', { bubbles: true }));
               }
             }
           }
@@ -70,16 +131,16 @@ async function automacaoBasica() {
         return resultados;
       });
       
-      console.log(`🎯 ${botoesClicados.length} botões encontrados:`, botoesClicados);
+      console.log(`🎯 ${botoesClicados.length} botões clicados:`, botoesClicados);
       
-      // Aguardar um pouco após os cliques
+      // Aguardar processamento
       await page.waitForTimeout(5000);
     }
     
     // Screenshot final
-    await page.screenshot({ path: 'passo3-final.png' });
+    await page.screenshot({ path: 'passo4-final.png' });
     
-    console.log('🎉 Automação concluída! Verifique os screenshots.');
+    console.log('🎉 Automação concluída!');
     
   } catch (error) {
     console.error('💥 Erro durante a automação:', error);
