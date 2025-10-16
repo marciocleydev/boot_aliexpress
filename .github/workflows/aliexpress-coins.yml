@@ -28,7 +28,7 @@ jobs:
 
     - name: Executar script de automação
       run: |
-       node scripts/login-focado.js
+       node scripts/debug-detailed.js
       env:
         ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
         ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
