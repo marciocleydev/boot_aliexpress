@@ -1,21 +1,24 @@
-// bot-rapido-mobile-corrigido.js
+// bot-rapido-mobile-final.js
 const puppeteer = require('puppeteer-core');
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-console.log('🚀 BOT MOBILE CORRIGIDO - Janela redimensionada');
+console.log('🚀 BOT MOBILE FINAL - Janela mantém tamanho');
 
 async function botRapido() {
   const browser = await puppeteer.launch({
     headless: false,
     executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     defaultViewport: null,
-    args: ['--window-size=390,844'] // 🔥 FORÇAR tamanho da janela
+    args: ['--window-size=390,844', '--window-position=0,0'] // 🔥 Tamanho FIXO
   });
 
   const page = await browser.newPage();
   
   try {
+    // 🔥 CONFIGURAR COMO MOBILE ANTES DE TUDO
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1');
+    
     console.log('1. 🔐 Indo para página de login...');
     await page.goto('https://login.aliexpress.com/', { 
       waitUntil: 'networkidle2',
@@ -129,21 +132,9 @@ async function botRapido() {
     console.log('⏳ Aguardando login completar... 10 segundos');
     await delay(10000);
 
-    console.log('6. 📱 REDIMENSIONANDO JANELA PARA MOBILE...');
+    // 🔥 REMOVIDO: page.setViewport() - Mantém tamanho original da janela
     
-    // 🔥 REDIMENSIONAR A JANELA INTEIRA
-    await page.setViewport({ width: 390, height: 844 });
-    // Forçar redimensionamento da janela do navegador
-    await page.evaluate(() => {
-      window.resizeTo(390, 844);
-    });
-    
-    // Configurar como mobile
-    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1');
-    
-    console.log('✅ Janela redimensionada para mobile!');
-
-    console.log('7. 🪙 Indo para página de moedas MOBILE...');
+    console.log('6. 🪙 Indo para página de moedas MOBILE...');
     await page.goto('https://m.aliexpress.com/p/coin-index/index.html?utm=botdoafiliado&_immersiveMode=true&from=syicon&t=botmoedas&tt=CPS_NORMAL', {
       waitUntil: 'networkidle2',
       timeout: 15000
@@ -152,12 +143,10 @@ async function botRapido() {
     console.log('✅ Página de moedas MOBILE carregada!');
     await delay(5000);
 
-    // 🔥 TENTAR VÁRIAS VEZES - as moedas podem carregar dinamicamente
-    console.log('8. 🔄 Procurando moedas para resgatar...');
+    console.log('7. 🔄 Procurando moedas para resgatar...');
     
     let totalMoedas = 0;
     
-    // Tentar várias vezes com scroll
     for (let tentativa = 1; tentativa <= 3; tentativa++) {
       console.log(`🔄 Tentativa ${tentativa} de encontrar moedas...`);
       
@@ -168,7 +157,6 @@ async function botRapido() {
         botoes.forEach(botao => {
           if (botao.offsetWidth > 0 && botao.offsetHeight > 0) {
             const texto = botao.textContent?.trim();
-            // Capturar botões com números (moedas) ou "claim"
             if (texto && (/^\d+$/.test(texto) || texto.toLowerCase().includes('claim') || texto.includes('Ganhe'))) {
               resultados.push(texto);
               botao.click();
@@ -180,19 +168,17 @@ async function botRapido() {
       });
       
       totalMoedas += moedasEncontradas.length;
-      console.log(`🎯 ${moedasEncontradas.length} moedas encontradas nesta tentativa:`, moedasEncontradas);
+      console.log(`🎯 ${moedasEncontradas.length} moedas encontradas:`, moedasEncontradas);
       
       if (moedasEncontradas.length > 0) {
-        await delay(3000); // Esperar processamento
+        await delay(3000);
       }
       
-      // Fazer scroll para carregar mais conteúdo
       await page.evaluate(() => window.scrollBy(0, 300));
       await delay(2000);
     }
 
     console.log(`🎉 TOTAL: ${totalMoedas} moedas resgatadas!`);
-    
     await delay(5000);
 
     console.log('🎉 🎉 🎉 SUCESSO TOTAL!');
