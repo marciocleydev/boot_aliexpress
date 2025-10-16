@@ -18,10 +18,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
 
-    - name: Instalar dependências
-      run: npm install
+    - name: Criar package.json e instalar Puppeteer
+      run: |
+        npm init -y
+        npm install puppeteer
 
     - name: Executar automação
       run: node scripts/script-basico.js
