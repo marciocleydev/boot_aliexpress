@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  automação:
+  automacao:
     runs-on: ubuntu-latest
     
     steps:
