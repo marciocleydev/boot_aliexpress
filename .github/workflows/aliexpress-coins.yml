@@ -1,34 +1,73 @@
-# .github/workflows/aliexpress.yml
-name: Resgatar Moedas AliExpress
+# .github/workflows/aliexpress-coins.yml
+name: 🪙 Resgatar Moedas AliExpress
 
 on:
+  # Executa automaticamente 2x por dia (2h e 14h UTC = 23h e 11h BRT)
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '0 2,14 * * *'
+  
+  # Permite execução manual
   workflow_dispatch:
+    inputs:
+      script:
+        description: 'Qual script executar?'
+        required: true
+        default: 'script-basico.js'
+        type: choice
+        options:
+          - script-basico.js
+          - login-focado.js
+          - automate-coins.js
 
 jobs:
   automacao:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
-    - name: Checkout código
+    - name: 📥 Checkout código
       uses: actions/checkout@v4
 
-    - name: Configurar Node.js
+    - name: 🟢 Configurar Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
+        cache: 'npm'
 
-    - name: Criar package.json e instalar Puppeteer
+    - name: 📦 Instalar dependências
       run: |
-        npm init -y
-        npm install puppeteer
+        npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
 
-    - name: Executar automação
-      run: node scripts/script-basico.js
+    - name: 🤖 Executar automação
+      env:
+        ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
+        ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
+      run: |
+        SCRIPT="${{ github.event.inputs.script || 'script-basico.js' }}"
+        echo "🚀 Executando: scripts/$SCRIPT"
+        node "scripts/$SCRIPT"
 
-    - name: Upload screenshots
+    - name: 📸 Upload screenshots
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: screenshots
+        name: screenshots-${{ github.run_number }}
         path: "*.png"
+        retention-days: 7
+        if-no-files-found: warn
+
+    - name: 📊 Relatório de conclusão
+      if: always()
+      run: |
+        echo "## 🎯 Resultado da Automação" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Script executado:** ${{ github.event.inputs.script || 'script-basico.js' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Data/Hora:** $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f *.png ]; then
+          echo "✅ Screenshots capturados com sucesso" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ Nenhum screenshot encontrado" >> $GITHUB_STEP_SUMMARY
+        fi

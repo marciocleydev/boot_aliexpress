@@ -1,7 +1,26 @@
 {
   "name": "boot_aliexpress",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Automação para coleta de moedas no AliExpress via extensão de navegador e GitHub Actions",
+  "main": "scripts/automate-coins.js",
+  "scripts": {
+    "start": "node scripts/automate-coins.js",
+    "basic": "node scripts/script-basico.js",
+    "login": "node scripts/login-focado.js",
+    "full": "node scripts/automate-coins.js"
+  },
+  "keywords": [
+    "aliexpress",
+    "automation",
+    "puppeteer",
+    "coins",
+    "chrome-extension"
+  ],
+  "author": "",
+  "license": "MIT",
   "dependencies": {
-    "puppeteer": "^21.0.0"
+    "puppeteer": "^21.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
