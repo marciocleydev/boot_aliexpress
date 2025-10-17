@@ -85,6 +85,21 @@ async function botUltimate() {
       hasTouch: true
     });
 
+//ADICIONADO AGORA
+    await page.setExtraHTTPHeaders({
+  'Accept-Language': 'pt-BR,pt;q=0.9'
+  });
+
+    await page.evaluateOnNewDocument(() => {
+  Object.defineProperty(navigator, "language", { get: () => "pt-BR" });
+  Object.defineProperty(navigator, "languages", { get: () => ["pt-BR", "pt"] });
+  Object.defineProperty(navigator, "acceptLanguages", { get: () => ["pt-BR", "pt"] });
+  });
+
+
+    
+    //ATÉ AQUI
+
     console.log('📱 Ambiente configurado!');
 
     // === LOGIN ===
