@@ -17,11 +17,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # REMOVENDO o cache para evitar o erro
 
     - name: 📦 Install dependencies
       run: |
-        npm install puppeteer-extra puppeteer-extra-plugin-stealth user-agents
+        npm install puppeteer-extra puppeteer-extra-plugin-stealth user-agents puppeteer
 
     - name: 🚀 Run AliExpress Bot
       env:
