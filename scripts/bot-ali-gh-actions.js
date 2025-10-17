@@ -2,6 +2,8 @@
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
+const fs = require('fs');
+const path = require('path');
 
 // Usar stealth plugin para evitar detection
 puppeteer.use(StealthPlugin());
@@ -21,13 +23,13 @@ async function botUltimate() {
   }
 
   console.log('📧 Email:', email);
-  console.log('🔑 Senha:', '***' + password.slice(-4)); // Log parcial por segurança
+  console.log('🔑 Senha:', '***' + password.slice(-4));
 
   // Configuração para GitHub Actions (headless)
   const userAgent = new UserAgent({ deviceCategory: 'mobile' });
   
   const browser = await puppeteer.launch({
-    headless: true, // Modo headless para GitHub Actions
+    headless: 'new', // Novo modo headless
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -49,7 +51,7 @@ async function botUltimate() {
   const page = await browser.newPage();
   
   try {
-    // 🔥 CONFIGURAÇÃO STEALTH AVANÇADA (mesmo do original)
+    // 🔥 CONFIGURAÇÃO STEALTH AVANÇADA
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', {
         get: () => undefined,
@@ -159,6 +161,7 @@ async function botUltimate() {
     const currentUrl = page.url();
     if (currentUrl.includes('login') || currentUrl.includes('signin')) {
       console.log('❌ Login falhou! Verifique as credenciais.');
+      await saveScreenshot(page, 'login-failed');
       await browser.close();
       return;
     }
@@ -175,117 +178,144 @@ async function botUltimate() {
     console.log('✅ Página de moedas carregada!');
     await delay(6000);
 
+    // Salvar screenshot da página de moedas
+    await saveScreenshot(page, 'pagina-moedas');
+
     console.log('7. 🔄 BUSCA AVANÇADA por moedas...');
     
     let totalMoedas = 0;
     let tentativas = 0;
-    const maxTentativas = 5;
+    const maxTentativas = 3;
 
     while (tentativas < maxTentativas) {
       tentativas++;
       console.log(`\n🔄 Tentativa ${tentativas}/${maxTentativas}`);
       
-      const resultado = await page.evaluate(() => {
-        const botoesMoedas = [];
-        const seletores = [
-          'button',
-          '.btn-claim',
-          '.claim-btn',
-          '[class*="claim"]',
-          '[class*="coin"]',
-          '[class*="button"]'
-        ];
+      try {
+        const resultado = await page.evaluate(() => {
+          const botoesMoedas = [];
+          const seletores = [
+            'button',
+            '.btn-claim',
+            '.claim-btn',
+            '[class*="claim"]',
+            '[class*="coin"]',
+            '[class*="button"]',
+            '.next-btn',
+            '.next-button'
+          ];
 
-        seletores.forEach(seletor => {
-          const elementos = document.querySelectorAll(seletor);
-          elementos.forEach(el => {
-            if (el.offsetWidth > 0 && el.offsetHeight > 0) {
-              const texto = el.textContent?.trim() || '';
-              const html = el.innerHTML?.toLowerCase() || '';
-              
-              if (/^\d+$/.test(texto) || 
-                  texto.toLowerCase().includes('claim') ||
-                  texto.toLowerCase().includes('ganhe') ||
-                  texto.toLowerCase().includes('coletar') ||
-                  texto.toLowerCase().includes('receber') ||
-                  texto.includes('+') ||
-                  html.includes('coin') ||
-                  html.includes('moeda')) {
+          // Procurar em todos os seletores possíveis
+          seletores.forEach(seletor => {
+            const elementos = document.querySelectorAll(seletor);
+            elementos.forEach(el => {
+              if (el.offsetWidth > 0 && el.offsetHeight > 0 && el.disabled === false) {
+                const texto = el.textContent?.trim() || '';
+                const html = el.innerHTML?.toLowerCase() || '';
                 
-                if (!botoesMoedas.some(b => b.texto === texto)) {
-                  botoesMoedas.push({
-                    elemento: el,
-                    texto: texto,
-                    seletor: seletor
-                  });
+                // Critérios mais amplos para moedas
+                if (/^\d+$/.test(texto) || 
+                    texto.toLowerCase().includes('claim') ||
+                    texto.toLowerCase().includes('ganhe') ||
+                    texto.toLowerCase().includes('coletar') ||
+                    texto.toLowerCase().includes('receber') ||
+                    texto.toLowerCase().includes('collect') ||
+                    texto.includes('+') ||
+                    html.includes('coin') ||
+                    html.includes('moeda')) {
+                  
+                  if (!botoesMoedas.some(b => b.texto === texto)) {
+                    botoesMoedas.push({
+                      elemento: el,
+                      texto: texto,
+                      seletor: seletor
+                    });
+                  }
                 }
               }
+            });
+          });
+
+          // Clicar em todos encontrados
+          const clicados = [];
+          botoesMoedas.forEach(item => {
+            try {
+              item.elemento.click();
+              clicados.push(item.texto);
+            } catch (e) {
+              // Ignora erros de clique
             }
           });
+
+          return {
+            encontrados: botoesMoedas.map(b => b.texto),
+            clicados: clicados,
+            totalEncontrados: botoesMoedas.length,
+            totalClicados: clicados.length
+          };
         });
 
-        const clicados = [];
-        botoesMoedas.forEach(item => {
-          try {
-            item.elemento.click();
-            clicados.push(item.texto);
-          } catch (e) {
-            // Ignora erros de clique
-          }
-        });
+        console.log(`📊 Encontrados: ${resultado.totalEncontrados}`);
+        console.log(`🎯 Clicados: ${resultado.totalClicados}`);
+        console.log(`📝 Botões:`, resultado.encontrados);
 
-        return {
-          encontrados: botoesMoedas.map(b => b.texto),
-          clicados: clicados,
-          totalEncontrados: botoesMoedas.length,
-          totalClicados: clicados.length
-        };
-      });
+        totalMoedas += resultado.totalClicados;
 
-      console.log(`📊 Encontrados: ${resultado.totalEncontrados}`);
-      console.log(`🎯 Clicados: ${resultado.totalClicados}`);
-      console.log(`📝 Botões:`, resultado.encontrados);
+        if (resultado.totalClicados > 0) {
+          console.log('⏳ Aguardando processamento...');
+          await delay(4000);
+        } else {
+          console.log('ℹ️ Nenhum botão encontrado nesta tentativa');
+        }
 
-      totalMoedas += resultado.totalClicados;
+        // Scroll estratégico mais seguro
+        await page.evaluate(() => window.scrollBy(0, 300));
+        await delay(2000);
+        
+        await page.evaluate(() => window.scrollBy(0, 400));
+        await delay(2000);
 
-      if (resultado.totalClicados > 0) {
-        console.log('⏳ Aguardando processamento...');
-        await delay(4000);
-      }
+        // Recarregar se necessário
+        if (tentativas === 2 && totalMoedas === 0) {
+          console.log('🔄 Recarregando página...');
+          await page.reload({ waitUntil: 'networkidle2' });
+          await delay(5000);
+        }
 
-      // Scroll estratégico
-      await page.evaluate(() => {
-        window.scrollTo(0, document.body.scrollHeight * 0.3);
-      });
-      await delay(2000);
-      
-      await page.evaluate(() => {
-        window.scrollTo(0, document.body.scrollHeight * 0.7);
-      });
-      await delay(2000);
-
-      if (tentativas === 2) {
-        console.log('🔄 Recarregando página para forçar atualização...');
-        await page.reload({ waitUntil: 'networkidle2' });
-        await delay(5000);
+      } catch (error) {
+        console.log('⚠️ Erro durante busca de moedas, continuando...');
+        console.log('🔍 Mensagem:', error.message);
       }
     }
 
     console.log(`\n🎉🎉🎉 RESULTADO FINAL: ${totalMoedas} MOEDAS RESGATADAS! 🎉🎉🎉`);
 
-    // Salvar screenshot para debug
-    await page.screenshot({ path: '/tmp/resultado-moedas.png', fullPage: true });
-    console.log('📸 Screenshot salvo em /tmp/resultado-moedas.png');
+    // Salvar screenshot final
+    await saveScreenshot(page, 'resultado-final');
 
   } catch (error) {
     console.error('💥 Erro crítico:', error);
-    // Salvar screenshot em caso de erro
-    await page.screenshot({ path: '/tmp/erro-moedas.png', fullPage: true });
-    console.log('📸 Screenshot do erro salvo em /tmp/erro-moedas.png');
+    await saveScreenshot(page, 'erro-critico');
     throw error;
   } finally {
     await browser.close();
     console.log('🔒 Navegador fechado.');
+  }
+}
+
+// Função auxiliar para salvar screenshots
+async function saveScreenshot(page, nome) {
+  try {
+    const screenshotDir = './screenshots';
+    if (!fs.existsSync(screenshotDir)) {
+      fs.mkdirSync(screenshotDir, { recursive: true });
+    }
+    
+    const screenshotPath = path.join(screenshotDir, `${nome}-${Date.now()}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    console.log(`📸 Screenshot salvo: ${screenshotPath}`);
+  } catch (error) {
+    console.log('❌ Erro ao salvar screenshot:', error.message);
   }
 }
 
