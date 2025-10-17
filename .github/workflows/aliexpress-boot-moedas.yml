@@ -1,0 +1,40 @@
+name: AliExpress Coin Bot
+
+on:
+  schedule:
+    # Executa todos os dias às 7:00 AM UTC (4:00 AM BRT)
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Permite execução manual
+
+jobs:
+  collect-coins:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: ⎔ Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: |
+        npm install puppeteer-extra puppeteer-extra-plugin-stealth user-agents
+
+    - name: 🚀 Run AliExpress Bot
+      env:
+        ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
+        ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
+      run: |
+        node bot-ali-gh-actions.js
+
+    - name: 📤 Upload screenshots (if any)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bot-screenshots
+        path: /tmp/*.png
+        retention-days: 1
