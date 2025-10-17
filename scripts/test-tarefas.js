@@ -1,34 +1,46 @@
-// bot-ali-inteligente.js
+// test-tarefas.js
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
+const fs = require('fs');
+const path = require('path');
 
 puppeteer.use(StealthPlugin());
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-console.log('🚀 BOT - Sistema com Tempo Limite de 4 Minutos');
+console.log('🚀 BOT COMPLETO - GitHub Actions Version');
 
-async function botEventosReais() {
+async function botUltimate() {
+  // Obter credenciais das variáveis de ambiente
+  const email = process.env.ALIEXPRESS_EMAIL;
+  const password = process.env.ALIEXPRESS_PASSWORD;
+  
+  if (!email || !password) {
+    console.error('❌ Credenciais não encontradas nas variáveis de ambiente');
+    process.exit(1);
+  }
+
+  console.log('📧 Email:', email);
+  console.log('🔑 Senha:', '***' + password.slice(-4));
+
+  // Configuração para GitHub Actions
   const userAgent = new UserAgent({ deviceCategory: 'mobile' });
   
   const browser = await puppeteer.launch({
-    headless: false,
-    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    defaultViewport: {
-      width: 390,
-      height: 844,
-      isMobile: true,
-      hasTouch: true
-    },
+    headless: 'new',
     args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu',
       '--window-size=390,844',
-      '--window-position=100,100',
       '--disable-blink-features=AutomationControlled',
       '--disable-notifications',
-      '--disable-password-manager-reauthentication',
       '--user-agent=' + userAgent.toString()
-    ],
-    ignoreDefaultArgs: ['--enable-automation']
+    ]
   });
 
   const page = await browser.newPage();
@@ -36,13 +48,13 @@ async function botEventosReais() {
   // 🔥 URL DA PÁGINA DE MOEDAS
   const URL_MOEDAS = 'https://m.aliexpress.com/p/coin-index/index.html?utm=botdoafiliado&_immersiveMode=true&from=syicon&t=botmoedas&tt=CPS_NORMAL&_mobile=1&_is_mobile=1';
 
-  // 🔥 SISTEMA INTELIGENTE - SÓ MARCA COMO CONCLUÍDA QUANDO REALMENTE TERMINOU
+  // 🔥 SISTEMA INTELIGENTE
   const tarefasConcluidas = new Set();
-  const contadorTarefas = new Map(); // Conta quantas vezes cada tarefa foi executada
-  const tarefasMultiplas = new Set(['Veja os super descontos', 'Descubra itens patrocinados']); // Tarefas que precisam de múltiplas execuções
+  const contadorTarefas = new Map();
+  const tarefasMultiplas = new Set(['Veja os super descontos', 'Descubra itens patrocinados']);
 
   try {
-    // 🔥 INTERCEPTA ABERTURA DE NOVAS ABAS
+    // 🔥 CONFIGURAÇÃO STEALTH
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
       delete navigator.chrome;
@@ -73,7 +85,7 @@ async function botEventosReais() {
 
     console.log('📱 Ambiente configurado!');
 
-    // === LOGIN ORIGINAL ===
+    // === LOGIN ===
     console.log('1. 🔐 Login...');
     await page.goto('https://login.aliexpress.com/', { 
       waitUntil: 'networkidle2',
@@ -83,7 +95,7 @@ async function botEventosReais() {
 
     const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
     if (emailInput) {
-      await emailInput.type('marciocley100@gmail.com', { delay: 100 });
+      await emailInput.type(email, { delay: 100 });
       await delay(2000);
       await page.keyboard.press('Tab');
     }
@@ -103,7 +115,7 @@ async function botEventosReais() {
 
     const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
     if (senhaInput) {
-      await senhaInput.type('Aliexpress@81050050', { delay: 80 });
+      await senhaInput.type(password, { delay: 80 });
     }
 
     await delay(2000);
@@ -120,12 +132,26 @@ async function botEventosReais() {
     console.log('⏳ Aguardando login... 15 segundos');
     await delay(15000);
 
+    // Verificar se login foi bem sucedido
+    const currentUrl = page.url();
+    if (currentUrl.includes('login') || currentUrl.includes('signin')) {
+      console.log('❌ Login falhou! Verifique as credenciais.');
+      await saveScreenshot(page, 'login-failed');
+      await browser.close();
+      return;
+    }
+
+    console.log('✅ Login realizado com sucesso!');
+
     // Navegar para moedas
-    console.log('6. 🪙 Indo para moedas...');
+    console.log('2. 🪙 Indo para moedas...');
     await page.goto(URL_MOEDAS, {
       waitUntil: 'networkidle2',
       timeout: 20000
     });
+
+    // Salvar screenshot
+    await saveScreenshot(page, 'pagina-moedas');
 
     // Remover popup de senha
     console.log('🗑️ Removendo popup de senha...');
@@ -133,17 +159,16 @@ async function botEventosReais() {
     await removerPopupSalvarSenhaAgressivo(page);
     await delay(3000);
 
-    // === ESTRATÉGIA COM TEMPO LIMITE DE 4 MINUTOS ===
-    console.log('7. 🔥 Iniciando execução com tempo limite de 4 minutos...\n');
+    // === ESTRATÉGIA COM TEMPO LIMITE ===
+    console.log('3. 🔥 Iniciando execução com tempo limite de 2.0 minutos...\n');
     
-    // 🔥 COLETAR MOEDAS DIÁRIAS SE DISPONÍVEL
+    // 🔥 COLETAR MOEDAS DIÁRIAS
     await coletarMoedasDiarias(page);
     
-    // 🔥 TEMPO LIMITE DE 2.5 MINUTOS (150 segundos)
-    const tempoLimite = 2.0 * 60 * 1000; // 2.5 minutos em milissegundos
+    // 🔥 TEMPO LIMITE DE 2.0 MINUTOS
+    const tempoLimite = 2.0 * 60 * 1000;
     const inicio = Date.now();
     
-    // 🔥 EXECUTAR LOOP POR ATÉ 4 MINUTOS
     let rodada = 0;
     
     while (Date.now() - inicio < tempoLimite) {
@@ -158,7 +183,7 @@ async function botEventosReais() {
         continue;
       }
       
-      // 🔥 OBTER TAREFAS DISPONÍVEIS (EXCLUINDO JOGOS)
+      // 🔥 OBTER TAREFAS DISPONÍVEIS
       let tarefasDisponiveis = [];
       try {
         tarefasDisponiveis = await obterTarefasDisponiveis(page);
@@ -178,7 +203,6 @@ async function botEventosReais() {
       const tarefasFiltradas = tarefasDisponiveis.filter(tarefa => {
         if (!tarefa || !tarefa.nome) return false;
         
-        // 🔥 EXCLUIR TAREFAS DE JOGO
         if (tarefa.nome.includes('Tente sua sorte') || 
             tarefa.nome.includes('Merge Boss') ||
             tarefa.nome.includes('jogo')) {
@@ -201,19 +225,16 @@ async function botEventosReais() {
       let tarefasExecutadas = 0;
       
       for (const tarefa of tarefasFiltradas) {
-        // 🔥 VERIFICAR TEMPO LIMITE A CADA TAREFA
         if (Date.now() - inicio >= tempoLimite) {
-          console.log('⏰ Tempo limite de 4 minutos atingido!');
+          console.log('⏰ Tempo limite de 2.0 minutos atingido!');
           break;
         }
         
         console.log(`\n🎯 EXECUTANDO: ${tarefa.nome}`);
         
-        // 🔥 ATUALIZAR CONTADOR DE EXECUÇÕES
         const execucoes = contadorTarefas.get(tarefa.nome) || 0;
         contadorTarefas.set(tarefa.nome, execucoes + 1);
         
-        // 🔥 VERIFICAR SE TAREFA JÁ FOI REALMENTE CONCLUÍDA
         if (tarefasConcluidas.has(tarefa.nome)) {
           console.log(`✅ ${tarefa.nome} - JÁ CONCLUÍDA (ignorando)`);
           continue;
@@ -225,19 +246,14 @@ async function botEventosReais() {
           console.log(`✅ ${tarefa.nome} - EXECUTADA COM SUCESSO (${execucoes + 1} execuções)`);
           tarefasExecutadas++;
           
-          // 🔥 SISTEMA INTELIGENTE - SÓ MARCA COMO CONCLUÍDA QUANDO REALMENTE TERMINOU
           if (tarefa.nome.includes('Explore itens surpresa')) {
-            // "Explore itens surpresa" precisa de 2 execuções
             if (execucoes + 1 >= 2) {
               console.log(`🎉 ${tarefa.nome} - 2 EXECUÇÕES COMPLETAS! Marcando como CONCLUÍDA`);
               tarefasConcluidas.add(tarefa.nome);
             }
           } else if (tarefasMultiplas.has(tarefa.nome)) {
-            // Tarefas que precisam de múltiplas execuções NUNCA são marcadas como concluídas automaticamente
-            // Elas continuarão aparecendo até que o tempo limite de 4 minutos acabe
             console.log(`🔄 ${tarefa.nome} - Tarefa múltipla, continuará executando`);
           } else {
-            // Tarefas normais são marcadas como concluídas após 1 execução
             console.log(`🎉 ${tarefa.nome} - CONCLUÍDA`);
             tarefasConcluidas.add(tarefa.nome);
           }
@@ -252,32 +268,35 @@ async function botEventosReais() {
         console.log('ℹ️ Nenhuma tarefa nova pôde ser executada nesta rodada');
       }
       
-      // Pequena pausa entre rodadas
       await delay(3000);
     }
 
-console.log('\n⏰ TEMPO LIMITE DE 2.5 MINUTOS ATINGIDO!');
-console.log('🎉 PROCESSO PRINCIPAL CONCLUÍDO!');
-console.log('📊 Estatísticas finais:');
-console.log('   - Tarefas completamente concluídas:', Array.from(tarefasConcluidas));
-console.log('   - Contador de execuções por tarefa:', Object.fromEntries(contadorTarefas));
+    console.log('\n⏰ TEMPO LIMITE DE 2.0 MINUTOS ATINGIDO!');
+    console.log('🎉 PROCESSO PRINCIPAL CONCLUÍDO!');
+    console.log('📊 Estatísticas finais:');
+    console.log('   - Tarefas completamente concluídas:', Array.from(tarefasConcluidas));
+    console.log('   - Contador de execuções por tarefa:', Object.fromEntries(contadorTarefas));
 
+    // 🔥 EXECUÇÃO ESPECIAL PARA "EXPLORE ITENS SURPRESA"
+    await executarExploreItensSurpresaFinal(page, URL_MOEDAS);
 
-
-
-
-// 🔥 EXECUÇÃO ESPECIAL PARA "EXPLORE ITENS SURPRESA"
-await executarExploreItensSurpresaFinal(page, URL_MOEDAS);
-
-console.log('\n🏁 TODAS AS TAREFAS FINALIZADAS!');
-await new Promise(() => {});
+    console.log('\n🏁 TODAS AS TAREFAS FINALIZADAS!');
     
+    // Salvar screenshot final
+    await saveScreenshot(page, 'resultado-final');
+
   } catch (error) {
-    console.error('💥 Erro:', error.message);
+    console.error('💥 Erro crítico:', error);
+    await saveScreenshot(page, 'erro-critico');
+    throw error;
+  } finally {
+    await browser.close();
+    console.log('🔒 Navegador fechado.');
   }
 }
 
-// 🔥 OBTER TAREFAS DISPONÍVEIS
+// 🔥 FUNÇÕES AUXILIARES (as mesmas do seu código)
+
 async function obterTarefasDisponiveis(page) {
   try {
     const tarefas = await page.evaluate(() => {
@@ -324,28 +343,22 @@ async function obterTarefasDisponiveis(page) {
   }
 }
 
-// 🔥 EXECUTAR TAREFA ESPECÍFICA
 async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   try {
-    // 🔥 CLICAR NA TAREFA ESPECÍFICA
     console.log(`   🔍 Clicando em: ${tarefa.nome}`);
     const clicked = await clicarTarefaEspecifica(page, tarefa.nome);
     if (!clicked) return false;
 
     await delay(3000);
 
-    // 🔥 VERIFICAR SE MUDOU DE PÁGINA
     const urlAtual = page.url();
     
     if (urlAtual.includes('coin-index')) {
-      // Tarefa instantânea (como check-in)
       console.log(`   ✅ Tarefa instantânea concluída`);
       return true;
     } else {
-      // Tarefa com navegação
       console.log(`   📱 Navegou para tarefa`);
       
-      // 🔥 IDENTIFICAR TIPO DE TAREFA PELO NOME
       if (tarefa.nome.includes('Explore itens surpresa')) {
         await executarExploreItensSurpresa(page, urlMoedas);
       } else if (tarefa.nome.includes('Procure o que você gosta')) {
@@ -354,17 +367,14 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
                  tarefa.nome.includes('Descubra itens patrocinados') ||
                  tarefa.nome.includes('Caça-descontos') ||
                  tarefa.nome.includes('Cupons e créditos')) {
-        // Tarefas com espera de 19 segundos
         console.log('   ⏳ Aguardando 19s...');
         await delay(19000);
         await voltarParaMoedas(page, urlMoedas);
       } else if (tarefa.nome.includes('Veja seu "Extrato de Moedas"')) {
-        // Tarefa extrato de moedas (15 segundos)
         console.log('   ⏳ Aguardando 15s...');
         await delay(15000);
         await voltarParaMoedas(page, urlMoedas);
       } else {
-        // Tarefa genérica (15 segundos)
         console.log('   ⏳ Aguardando 15s...');
         await delay(15000);
         await voltarParaMoedas(page, urlMoedas);
@@ -383,76 +393,54 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   }
 }
 
-// 🔥 EXECUTAR EXPLORE ITENS SURPRESA (MELHORADO)
 async function executarExploreItensSurpresa(page, urlMoedas) {
   console.log('   🎁 Executando itens surpresa (3 produtos)...');
-  
-  // 🔥 AGUARDAR PÁGINA CARREGAR COMPLETAMENTE
-  console.log('   ⏳ Aguardando carregamento da página...');
   await delay(6000);
   
-  // 🔥 CLICA EM 3 PRODUTOS DIFERENTES
   for (let i = 1; i <= 3; i++) {
     console.log(`   👆 Procurando ${i}º produto...`);
     
     const clicked = await page.evaluate((index) => {
       try {
-        // Pega todos os elementos que parecem produtos
         const produtos = Array.from(document.querySelectorAll('a, div[class*="product"], div[class*="item"], [class*="card"]'));
-        
-        // Filtra apenas os visíveis e que estão na parte inferior da tela
         const produtosVisiveis = produtos.filter(el => {
           const rect = el.getBoundingClientRect();
           const estaVisivel = rect.width > 0 && rect.height > 0 && rect.top > 0;
           const estaNaParteInferior = rect.top > (window.innerHeight * 0.3);
-          
           return estaVisivel && estaNaParteInferior;
         });
         
         console.log(`🔍 Encontrados ${produtosVisiveis.length} produtos visíveis`);
-        
-        // Seleciona produtos em posições diferentes (evita cliques repetidos)
         const produtoIndex = Math.min((index - 1) * 3, produtosVisiveis.length - 1);
         
         if (produtosVisiveis[produtoIndex]) {
           console.log(`🎯 Clicando no produto ${produtoIndex + 1}`);
           produtosVisiveis[produtoIndex].click();
           return true;
-        } else {
-          console.log(`❌ Não encontrou produto na posição ${produtoIndex}`);
-          return false;
         }
+        return false;
       } catch (e) {
-        console.log('Erro ao clicar no produto:', e);
         return false;
       }
     }, i);
 
     if (clicked) {
       console.log(`   ✅ Produto ${i} clicado`);
-      await delay(4000); // Aguarda mais tempo para página carregar
-      
-      // Volta para a lista de produtos
+      await delay(4000);
       console.log('   ↩️ Voltando para lista de produtos...');
       await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 });
-      await delay(3000); // Aguarda recarregamento da lista
+      await delay(3000);
     } else {
       console.log(`   ❌ Produto ${i} não encontrado, tentando próximo...`);
-      
-      // Tenta scroll para ver mais produtos
-      await page.evaluate(() => {
-        window.scrollBy(0, 300);
-      });
+      await page.evaluate(() => { window.scrollBy(0, 300); });
       await delay(2000);
     }
   }
   
-  // 🔥 VOLTA PARA MOEDAS APÓS OS 3 PRODUTOS
   console.log('   🔄 Voltando para moedas...');
   await voltarParaMoedas(page, urlMoedas);
 }
 
-// 🔥 EXECUTAR PESQUISA
 async function executarPesquisa(page, urlMoedas) {
   console.log('   🔍 Executando pesquisa...');
   await delay(5000);
@@ -485,7 +473,6 @@ async function executarPesquisa(page, urlMoedas) {
   await voltarParaMoedas(page, urlMoedas);
 }
 
-// 🔥 VOLTAR PARA PÁGINA DE MOEDAS
 async function voltarParaMoedas(page, urlMoedas) {
   try {
     console.log('   ↩️ Voltando para moedas...');
@@ -515,13 +502,11 @@ async function voltarParaMoedas(page, urlMoedas) {
   }
 }
 
-// 🔥 CLICAR TAREFA ESPECÍFICA
 async function clicarTarefaEspecifica(page, nomeTarefa) {
   try {
     const sucesso = await page.evaluate((nome) => {
       try {
         const tarefas = document.querySelectorAll('.e2e_normal_task');
-        
         for (let tarefa of tarefas) {
           const titulo = tarefa.querySelector('.e2e_normal_task_content_title');
           if (titulo && titulo.textContent.trim() === nome) {
@@ -545,14 +530,12 @@ async function clicarTarefaEspecifica(page, nomeTarefa) {
   }
 }
 
-// 🔥 COLETAR MOEDAS DIÁRIAS
 async function coletarMoedasDiarias(page) {
   try {
     console.log('💰 Verificando moedas para coletar...');
     
     const coletou = await page.evaluate(() => {
       const botoes = Array.from(document.querySelectorAll('button, div, span'));
-      
       for (let btn of botoes) {
         const texto = btn.textContent?.toLowerCase() || '';
         if (texto.includes('coletar') || texto.includes('collect')) {
@@ -572,13 +555,10 @@ async function coletarMoedasDiarias(page) {
   }
 }
 
-// 🔥 ABRIR MODAL DE TAREFAS
 async function abrirModalTarefas(page) {
   try {
     const modalAberto = await verificarModalAberto(page);
-    if (modalAberto) {
-      return true;
-    }
+    if (modalAberto) return true;
     
     await page.click('#signButton');
     await delay(5000);
@@ -591,7 +571,6 @@ async function abrirModalTarefas(page) {
   }
 }
 
-// 🔥 FUNÇÕES AUXILIARES
 async function verificarModalAberto(page) {
   try {
     return await page.evaluate(() => {
@@ -611,13 +590,10 @@ async function removerPopupSalvarSenhaAgressivo(page) {
   try {
     const popupFechado = await page.evaluate(() => {
       try {
-        // 🔥 PRIMEIRO: Tenta encontrar e clicar no "X" para fechar
         const elementosFechar = Array.from(document.querySelectorAll('div, button, span'));
         const xButtons = elementosFechar.filter(el => {
           const texto = el.textContent?.trim() || '';
           const html = el.innerHTML?.toLowerCase() || '';
-          
-          // Procura por "X", ícones de fechar, ou elementos com classes de fechar
           return texto === '×' || texto === '✕' || texto === '✖' || 
                  texto === 'X' || html.includes('close') || 
                  html.includes('fechar') || el.className.includes('close') ||
@@ -633,7 +609,6 @@ async function removerPopupSalvarSenhaAgressivo(page) {
           }
         }
         
-        // 🔥 SEGUNDO: Tenta clicar em áreas vazias/overlay para fechar
         const overlays = Array.from(document.querySelectorAll('div[style*="background"], div[class*="overlay"], div[class*="mask"]'));
         for (let overlay of overlays) {
           const style = window.getComputedStyle(overlay);
@@ -645,7 +620,6 @@ async function removerPopupSalvarSenhaAgressivo(page) {
           }
         }
         
-        // 🔥 TERCEIRO: Tenta botões de texto ("never", "nunca", etc)
         const textosParaClicar = ['never', 'nunca', 'not now', 'agora não', 'cancelar', 'cancel', 'later', 'depois'];
         const todosBotoes = Array.from(document.querySelectorAll('button, div, span, a'));
         
@@ -668,108 +642,74 @@ async function removerPopupSalvarSenhaAgressivo(page) {
     if (popupFechado) {
       console.log('✅ Popup fechado com sucesso');
       await delay(2000);
-    } else {
-      console.log('ℹ️ Nenhum popup encontrado para fechar');
     }
   } catch (error) {
     console.log('ℹ️ Erro ao tentar fechar popup:', error.message);
   }
 }
 
-
-
-
-
-// 🔥 FUNÇÃO EXCLUSIVA PARA EXPLORE ITENS SURPRESA - AJUSTE FINAL
+// 🔥 FUNÇÃO EXCLUSIVA PARA EXPLORE ITENS SURPRESA
 async function executarExploreItensSurpresaFinal(page, urlMoedas) {
   console.log('\n🎯 INICIANDO EXECUÇÃO ESPECIAL PARA "EXPLORE ITENS SURPRESA"');
   
   try {
-    // 🔥 SALVA A ABA PRINCIPAL
     const paginaPrincipal = page;
     
-    // 🔥 EXECUTAR 2 VEZES 
     for (let execucao = 1; execucao <= 2; execucao++) {
       console.log(`\n🔁 Execução ${execucao}/2 da tarefa especial...`);
       
-      // 🔥 ABRIR MODAL NA ABA PRINCIPAL
       console.log('1. 📱 Abrindo modal de tarefas...');
       const modalAberto = await abrirModalTarefas(paginaPrincipal);
-      if (!modalAberto) {
-        console.log('❌ Não conseguiu abrir modal');
-        continue;
-      }
+      if (!modalAberto) continue;
       await delay(3000);
       
-      // 🔥 CLICAR EM "EXPLORE ITENS SURPRESA" NA ABA PRINCIPAL
       console.log('2. 🔍 Clicando em "Explore itens surpresa"...');
       const tarefaEncontrada = await clicarTarefaEspecifica(paginaPrincipal, 'Explore itens surpresa');
-      
-      if (!tarefaEncontrada) {
-        console.log('❌ Tarefa "Explore itens surpresa" não encontrada');
-        continue;
-      }
+      if (!tarefaEncontrada) continue;
       
       console.log('3. 🚀 Aguardando nova aba abrir...');
       await delay(6000);
       
-      // 🔥 MUDA PARA A NOVA ABA
       const browser = paginaPrincipal.browser();
       const pages = await browser.pages();
-      
-      if (pages.length <= 1) {
-        console.log('❌ Nenhuma nova aba foi aberta');
-        continue;
-      }
+      if (pages.length <= 1) continue;
       
       const novaAba = pages[pages.length - 1];
       console.log('   ✅ Mudando para nova aba de produtos...');
       await novaAba.bringToFront();
-      
-      // 🔥 AGORA TRABALHA NA NOVA ABA
       await delay(4000);
       
-      // 🔥 VERIFICA SE ESTÁ NA PÁGINA CORRETA
       const estaNaPaginaProdutos = await novaAba.evaluate(() => {
         return document.querySelector('.product-click') !== null;
       });
       
       if (!estaNaPaginaProdutos) {
-        console.log('❌ Não está na página de produtos');
         await novaAba.close();
         await paginaPrincipal.bringToFront();
         continue;
       }
       
       console.log('4. 🎯 Clicando em 3 produtos...');
-      
       const produtosClicados = new Set();
       
       for (let i = 1; i <= 3; i++) {
         console.log(`   📦 Procurando produto ${i}/3...`);
         
-        let produtoEncontrado = false;
-        
-        // 🔥 CLICA NO PRODUTO NA NOVA ABA
         const resultado = await novaAba.evaluate((clicados, indice) => {
           try {
             const productClicks = Array.from(document.querySelectorAll('.product-click'));
             console.log(`🔍 Encontrados ${productClicks.length} elementos .product-click`);
-            
-            // Filtra produtos visíveis
             const clicksVisiveis = productClicks.filter(el => {
               const rect = el.getBoundingClientRect();
               return rect.width > 0 && rect.height > 0;
             });
             
-            // Seleciona produto por índice (evita repetição)
             if (clicksVisiveis.length > indice - 1) {
               const produto = clicksVisiveis[indice - 1];
               produto.scrollIntoView({ behavior: 'smooth', block: 'center' });
               produto.click();
               return { success: true };
             }
-            
             return { success: false };
           } catch (e) {
             return { success: false, error: e.message };
@@ -777,15 +717,11 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
         }, Array.from(produtosClicados), i);
         
         if (resultado.success) {
-          produtoEncontrado = true;
           produtosClicados.add(i);
           console.log(`   ✅ Produto ${i}/3 clicado!`);
-          
-          // 🔥 AGUARDA NA NOVA ABA
           console.log('   ⏳ Aguardando 8s...');
           await delay(8000);
           
-          // 🔥 VOLTA PARA LISTA USANDO BOTÃO NATIVO NA NOVA ABA
           console.log('   ↩️ Voltando com botão nativo...');
           const voltou = await novaAba.evaluate(() => {
             try {
@@ -807,14 +743,10 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
           
           await delay(4000);
           
-          // 🔥 FAZ SCROLL NA NOVA ABA
           if (i < 3) {
-            await novaAba.evaluate(() => {
-              window.scrollBy(0, 400);
-            });
+            await novaAba.evaluate(() => { window.scrollBy(0, 400); });
             await delay(2000);
           }
-          
         } else {
           console.log(`   ❌ Produto ${i} não encontrado`);
           break;
@@ -822,14 +754,11 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
       }
       
       console.log(`🎉 Execução ${execucao}/2 concluída! ${produtosClicados.size} produtos clicados.`);
-      
-      // 🔥 FECHA A NOVA ABA E VOLTA PARA PRINCIPAL
       console.log('   🗑️ Fechando aba de produtos...');
       await novaAba.close();
       await paginaPrincipal.bringToFront();
       await delay(3000);
       
-      // 🔥 NÃO RECARREGA - JÁ ESTÁ NA PÁGINA DE MOEDAS COM MODAL ABERTO
       if (execucao < 2) {
         console.log('🔄 Pronto para próxima execução...');
         await delay(3000);
@@ -840,12 +769,9 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
     
   } catch (error) {
     console.log('💥 Erro na execução especial:', error.message);
-    
-    // Limpeza
     try {
       const browser = page.browser();
       const pages = await browser.pages();
-      // Fecha todas as abas exceto a principal
       for (let i = pages.length - 1; i > 0; i--) {
         await pages[i].close();
       }
@@ -854,5 +780,28 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
   }
 }
 
-console.log('🚀 Executar: node bot-ali-inteligente.js\n');
-botEventosReais();
+// Função para salvar screenshots
+async function saveScreenshot(page, nome) {
+  try {
+    const screenshotDir = './screenshots';
+    if (!fs.existsSync(screenshotDir)) {
+      fs.mkdirSync(screenshotDir, { recursive: true });
+    }
+    
+    const screenshotPath = path.join(screenshotDir, `${nome}-${Date.now()}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    console.log(`📸 Screenshot salvo: ${screenshotPath}`);
+  } catch (error) {
+    console.log('❌ Erro ao salvar screenshot:', error.message);
+  }
+}
+
+// Executar apenas se chamado diretamente
+if (require.main === module) {
+  botUltimate().catch(error => {
+    console.error('❌ Erro na execução do bot:', error);
+    process.exit(1);
+  });
+}
+
+module.exports = botUltimate;
