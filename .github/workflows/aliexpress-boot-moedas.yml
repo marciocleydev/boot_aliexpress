@@ -3,7 +3,7 @@ name: 🪙 AliExpress Coin Bot
 on:
   schedule:
     - cron: '0 7 * * *'  # 7:00 AM UTC (4:00 AM BRT)
-  workflow_dispatch:      # Permite execução manual
+  workflow_dispatch:
 
 jobs:
   collect-coins:
@@ -18,7 +18,7 @@ jobs:
       with:
         node-version: '18'
 
-    - name: 📦 Install ALL dependencies
+    - name: 📦 Install dependencies
       run: |
         npm install
 
@@ -26,10 +26,19 @@ jobs:
       env:
         ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
         ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
-      run: node ./scripts/bot-ali-gh-actions.js
+      run: node scripts/bot-ali-gh-actions.js
 
-    - name: 📋 Show execution logs
+    - name: 📤 Upload screenshots
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bot-screenshots
+        path: screenshots/
+        retention-days: 7
+
+    - name: 📋 Show summary
       if: always()
       run: |
-        echo "✅ Bot execution completed!"
-        echo "📅 Next run: tomorrow at 7:00 AM UTC"
+        echo "✅ Execução do bot finalizada!"
+        echo "📸 Screenshots disponíveis para download acima"
+        echo "🔄 Próxima execução: 7:00 AM UTC"
