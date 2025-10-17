@@ -1,4 +1,4 @@
-// test-tarefas.js
+// bot-ali-bilingue.js
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
@@ -8,7 +8,7 @@ const path = require('path');
 puppeteer.use(StealthPlugin());
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-console.log('🚀 BOT COMPLETO - GitHub Actions Version');
+console.log('🚀 BOT COMPLETO - Versão Bilíngue (PT/EN)');
 
 async function botUltimate() {
   // Obter credenciais das variáveis de ambiente
@@ -39,7 +39,10 @@ async function botUltimate() {
       '--window-size=390,844',
       '--disable-blink-features=AutomationControlled',
       '--disable-notifications',
-      '--user-agent=' + userAgent.toString()
+      '--user-agent=' + userAgent.toString(),
+      // 🔥 CONFIGURAÇÃO DE IDIOMA
+      '--lang=pt-BR',
+      '--accept-lang=pt-BR,pt'
     ]
   });
 
@@ -199,13 +202,12 @@ async function botUltimate() {
         continue;
       }
       
-      // 🔥 FILTRAR TAREFAS - REMOVER JOGOS
+      // 🔥 FILTRAR TAREFAS - REMOVER JOGOS (BILÍNGUE)
       const tarefasFiltradas = tarefasDisponiveis.filter(tarefa => {
         if (!tarefa || !tarefa.nome) return false;
         
-        if (tarefa.nome.includes('Tente sua sorte') || 
-            tarefa.nome.includes('Merge Boss') ||
-            tarefa.nome.includes('jogo')) {
+        const nomeTarefaLower = tarefa.nome.toLowerCase();
+        if (nomeTarefaLower.match(/(tente sua sorte|try your luck|merge boss|jogo|game)/i)) {
           console.log(`🚫 Ignorando tarefa de jogo: ${tarefa.nome}`);
           return false;
         }
@@ -295,8 +297,7 @@ async function botUltimate() {
   }
 }
 
-// 🔥 FUNÇÕES AUXILIARES (as mesmas do seu código)
-
+// 🔥 FUNÇÃO OBTER TAREFAS DISPONÍVEIS (BILÍNGUE)
 async function obterTarefasDisponiveis(page) {
   try {
     const tarefas = await page.evaluate(() => {
@@ -318,8 +319,39 @@ async function obterTarefasDisponiveis(page) {
               const botaoDisponivel = textoBotao === 'Ir' || textoBotao === 'Go';
               
               if (botaoVisivel && botaoHabilitado && botaoDisponivel) {
+                // 🔁 NORMALIZAR NOMES EM PORTUGUÊS/INGLÊS
+                let nomePadrao = nome.trim();
+
+                const mapaTarefas = {
+                  // Coleta de moedas
+                  'collect coins': 'Coletar Moedas',
+                  'claim coins': 'Coletar Moedas',
+
+                  // Tarefas diárias
+                  'explore surprise items': 'Explore Itens Surpresa',
+                  'explore items surprise': 'Explore Itens Surpresa',
+                  'search what you like': 'Procure o que você gosta',
+                  'see super deals': 'Veja os super descontos',
+                  'discover sponsored items': 'Descubra itens patrocinados',
+                  'check your coin statement': 'Veja seu "Extrato de Moedas"',
+                  'coupon & credits': 'Cupons e créditos',
+                  'hunt discounts': 'Caça-descontos',
+
+                  // Outros exemplos possíveis
+                  'try your luck': 'Tente sua sorte',
+                  'merge boss': 'Merge Boss'
+                };
+
+                const nomeLower = nome.toLowerCase();
+                for (const [en, pt] of Object.entries(mapaTarefas)) {
+                  if (nomeLower.includes(en)) {
+                    nomePadrao = pt;
+                    break;
+                  }
+                }
+
                 resultados.push({
-                  nome: nome,
+                  nome: nomePadrao,
                   elemento: 'botao_ir'
                 });
               }
@@ -343,6 +375,7 @@ async function obterTarefasDisponiveis(page) {
   }
 }
 
+// 🔥 FUNÇÃO EXECUTAR TAREFA ESPECÍFICA (BILÍNGUE)
 async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   try {
     console.log(`   🔍 Clicando em: ${tarefa.nome}`);
@@ -359,21 +392,30 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
     } else {
       console.log(`   📱 Navegou para tarefa`);
       
-      if (tarefa.nome.includes('Explore itens surpresa')) {
+      const nome = tarefa.nome.toLowerCase();
+
+      if (nome.includes('explore itens surpresa') || nome.includes('explore surprise items')) {
         await executarExploreItensSurpresa(page, urlMoedas);
-      } else if (tarefa.nome.includes('Procure o que você gosta')) {
+
+      } else if (nome.includes('procure o que você gosta') || nome.includes('search what you like')) {
         await executarPesquisa(page, urlMoedas);
-      } else if (tarefa.nome.includes('Veja os super descontos') || 
-                 tarefa.nome.includes('Descubra itens patrocinados') ||
-                 tarefa.nome.includes('Caça-descontos') ||
-                 tarefa.nome.includes('Cupons e créditos')) {
+
+      } else if (
+        nome.includes('veja os super descontos') || nome.includes('see super deals') ||
+        nome.includes('descubra itens patrocinados') || nome.includes('discover sponsored items') ||
+        nome.includes('caça-descontos') || nome.includes('hunt discounts') ||
+        nome.includes('cupons e créditos') || nome.includes('coupons and credits') ||
+        nome.includes('coupon & credits')
+      ) {
         console.log('   ⏳ Aguardando 19s...');
         await delay(19000);
         await voltarParaMoedas(page, urlMoedas);
-      } else if (tarefa.nome.includes('Veja seu "Extrato de Moedas"')) {
+
+      } else if (nome.includes('veja seu "extrato de moedas"') || nome.includes('check your coin statement')) {
         console.log('   ⏳ Aguardando 15s...');
         await delay(15000);
         await voltarParaMoedas(page, urlMoedas);
+
       } else {
         console.log('   ⏳ Aguardando 15s...');
         await delay(15000);
@@ -392,6 +434,74 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
     return false;
   }
 }
+
+// 🔥 FUNÇÃO CLICAR TAREFA ESPECÍFICA (BILÍNGUE)
+async function clicarTarefaEspecifica(page, nomeTarefa) {
+  try {
+    const sucesso = await page.evaluate((nomeTarefaProcurada) => {
+      try {
+        const tarefas = document.querySelectorAll('.e2e_normal_task');
+        for (let tarefa of tarefas) {
+          const titulo = tarefa.querySelector('.e2e_normal_task_content_title');
+          if (titulo) {
+            const nomeTarefa = titulo.textContent.trim().toLowerCase();
+            const nomeProcurado = nomeTarefaProcurada.toLowerCase();
+            
+            // 🔥 ACEITA TANTO PT QUANTO EN
+            const mapaEquivalencias = {
+              'explore itens surpresa': ['explore surprise items', 'explore items surprise'],
+              'procure o que você gosta': ['search what you like'],
+              'veja os super descontos': ['see super deals'],
+              'descubra itens patrocinados': ['discover sponsored items'],
+              'veja seu "extrato de moedas"': ['check your coin statement'],
+              'cupons e créditos': ['coupons and credits', 'coupon & credits'],
+              'caça-descontos': ['hunt discounts'],
+              'coletar moedas': ['collect coins', 'claim coins']
+            };
+            
+            let encontrou = false;
+            
+            // Verifica se é o nome exato ou equivalente
+            if (nomeTarefa.includes(nomeProcurado)) {
+              encontrou = true;
+            } else {
+              // Verifica equivalências
+              for (const [pt, equivalentes] of Object.entries(mapaEquivalencias)) {
+                if (pt.includes(nomeProcurado)) {
+                  for (const equivalente of equivalentes) {
+                    if (nomeTarefa.includes(equivalente)) {
+                      encontrou = true;
+                      break;
+                    }
+                  }
+                }
+                if (encontrou) break;
+              }
+            }
+            
+            if (encontrou) {
+              const botaoIr = tarefa.querySelector('.e2e_normal_task_right_btn');
+              if (botaoIr && botaoIr.offsetWidth > 0) {
+                botaoIr.click();
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      } catch (e) {
+        return false;
+      }
+    }, nomeTarefa);
+
+    return sucesso;
+  } catch (error) {
+    console.log(`   ❌ Erro ao clicar:`, error.message);
+    return false;
+  }
+}
+
+// 🔥 FUNÇÕES AUXILIARES (MANTIDAS ORIGINAIS)
 
 async function executarExploreItensSurpresa(page, urlMoedas) {
   console.log('   🎁 Executando itens surpresa (3 produtos)...');
@@ -498,34 +608,6 @@ async function voltarParaMoedas(page, urlMoedas) {
     return true;
   } catch (error) {
     console.log('   ❌ Erro ao voltar para moedas:', error.message);
-    return false;
-  }
-}
-
-async function clicarTarefaEspecifica(page, nomeTarefa) {
-  try {
-    const sucesso = await page.evaluate((nome) => {
-      try {
-        const tarefas = document.querySelectorAll('.e2e_normal_task');
-        for (let tarefa of tarefas) {
-          const titulo = tarefa.querySelector('.e2e_normal_task_content_title');
-          if (titulo && titulo.textContent.trim() === nome) {
-            const botaoIr = tarefa.querySelector('.e2e_normal_task_right_btn');
-            if (botaoIr && botaoIr.offsetWidth > 0) {
-              botaoIr.click();
-              return true;
-            }
-          }
-        }
-        return false;
-      } catch (e) {
-        return false;
-      }
-    }, nomeTarefa);
-
-    return sucesso;
-  } catch (error) {
-    console.log(`   ❌ Erro ao clicar:`, error.message);
     return false;
   }
 }
