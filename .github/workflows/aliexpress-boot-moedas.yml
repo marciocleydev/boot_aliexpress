@@ -1,10 +1,9 @@
-name: AliExpress Coin Bot
+name: 🪙 AliExpress Coin Bot
 
 on:
   schedule:
-    # Executa todos os dias às 7:00 AM UTC (4:00 AM BRT)
     - cron: '0 7 * * *'
-  workflow_dispatch: # Permite execução manual
+  workflow_dispatch:
 
 jobs:
   collect-coins:
@@ -18,7 +17,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
+        # REMOVENDO o cache para evitar o erro
 
     - name: 📦 Install dependencies
       run: |
@@ -28,13 +27,4 @@ jobs:
       env:
         ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
         ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
-      run: |
-        node ./scripts/bot-ali-gh-actions.js
-
-    - name: 📤 Upload screenshots (if any)
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: bot-screenshots
-        path: /tmp/*.png
-        retention-days: 1
+      run: node ./scripts/bot-ali-gh-actions.js
