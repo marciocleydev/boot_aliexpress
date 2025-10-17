@@ -1,0 +1,44 @@
+name: test-tarefas
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 7:00 AM UTC (4:00 AM BRT)
+  workflow_dispatch:
+
+jobs:
+  collect-coins:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: ⎔ Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: 📦 Install dependencies
+      run: |
+        npm install
+
+    - name: 🚀 Run AliExpress Bot
+      env:
+        ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
+        ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
+      run: node scripts/test-tarefas.js
+
+    - name: 📤 Upload screenshots
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bot-screenshots
+        path: screenshots/
+        retention-days: 7
+
+    - name: 📋 Show summary
+      if: always()
+      run: |
+        echo "✅ Execução do bot finalizada!"
+        echo "📸 Screenshots disponíveis para download acima"
+        echo "🔄 Próxima execução: 7:00 AM UTC"
