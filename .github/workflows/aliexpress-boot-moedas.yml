@@ -29,7 +29,7 @@ jobs:
         ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
         ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
       run: |
-        node bot-ali-gh-actions.js
+        ./scripts/node bot-ali-gh-actions.js
 
     - name: 📤 Upload screenshots (if any)
       uses: actions/upload-artifact@v4
