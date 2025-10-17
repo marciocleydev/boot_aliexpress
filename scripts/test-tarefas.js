@@ -22,7 +22,7 @@ async function botUltimate() {
   console.log('📧 Email:', email);
   console.log('🔑 Senha:', '***' + password.slice(-4));
 
-  // 🔥 USER AGENT FIXO PARA IPHONE (evita erro do user-agents)
+  // 🔥 USER AGENT FIXO PARA IPHONE
   const userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1';
   
   const browser = await puppeteer.launch({
@@ -39,7 +39,6 @@ async function botUltimate() {
       '--disable-blink-features=AutomationControlled',
       '--disable-notifications',
       '--user-agent=' + userAgent,
-      // 🔥 CONFIGURAÇÃO DE IDIOMA PARA GITHUB ACTIONS
       '--lang=en-US',
       '--accept-lang=en-US,en'
     ]
@@ -183,8 +182,8 @@ async function botUltimate() {
       rodada++;
       console.log(`\n🔄 Rodada ${rodada} - Tempo restante: ${Math.round((tempoLimite - (Date.now() - inicio)) / 1000)}s`);
       
-      // 🔥 ABRIR MODAL DE TAREFAS (BILÍNGUE)
-      const modalAberto = await abrirModalTarefasBilingue(page);
+      // 🔥 ABRIR MODAL DE TAREFAS (MELHORADO)
+      const modalAberto = await abrirModalTarefasMelhorado(page);
       if (!modalAberto) {
         console.log('❌ Não conseguiu abrir modal, tentando novamente...');
         await delay(5000);
@@ -303,21 +302,188 @@ async function botUltimate() {
   }
 }
 
+// 🔥 FUNÇÃO MELHORADA PARA ABRIR MODAL DE TAREFAS
+async function abrirModalTarefasMelhorado(page) {
+  try {
+    // Primeiro verificar se o modal já está aberto
+    const modalAberto = await verificarModalAberto(page);
+    if (modalAberto) {
+      console.log('✅ Modal já está aberto');
+      return true;
+    }
+    
+    console.log('🔍 Procurando botão "Earn more coins"...');
+    
+    // 🔥 TENTAR DIFERENTES ESTRATÉGIAS PARA ENCONTRAR O BOTÃO
+    const botaoEncontrado = await page.evaluate(() => {
+      try {
+        // ESTRATÉGIA 1: Procurar por texto específico
+        const textosProcurados = [
+          'earn more coins', 'ganhe mais moedas', 'more coins', 
+          'mais moedas', 'earn coins', 'ganhar moedas',
+          'daily check-in', 'check-in diário', 'tasks', 'tarefas'
+        ];
+        
+        const todosElementos = Array.from(document.querySelectorAll('button, div, span, a'));
+        
+        for (const elemento of todosElementos) {
+          const texto = elemento.textContent?.toLowerCase() || '';
+          const html = elemento.innerHTML?.toLowerCase() || '';
+          
+          // Verificar se contém algum dos textos procurados
+          for (const textoProcurado of textosProcurados) {
+            if (texto.includes(textoProcurado) || html.includes(textoProcurado)) {
+              if (elemento.offsetWidth > 0 && elemento.offsetHeight > 0) {
+                console.log(`🎯 Encontrado botão por texto: "${textoProcurado}"`);
+                elemento.click();
+                return true;
+              }
+            }
+          }
+        }
+        
+        // ESTRATÉGIA 2: Procurar por elementos com classes específicas
+        const classesProcuradas = [
+          'signButton', 'earn-button', 'task-button', 'coin-button',
+          'daily-button', 'checkin-button', 'more-button'
+        ];
+        
+        for (const classe of classesProcuradas) {
+          const elementos = document.querySelectorAll(`[class*="${classe}"]`);
+          for (const elemento of elementos) {
+            if (elemento.offsetWidth > 0 && elemento.offsetHeight > 0) {
+              console.log(`🎯 Encontrado botão por classe: "${classe}"`);
+              elemento.click();
+              return true;
+            }
+          }
+        }
+        
+        // ESTRATÉGIA 3: Procurar por botões verdes ou com estilo destacado
+        const botoesColoridos = Array.from(document.querySelectorAll('button'));
+        for (const botao of botoesColoridos) {
+          const style = window.getComputedStyle(botao);
+          const bgColor = style.backgroundColor;
+          const isGreen = bgColor.includes('rgb(0, 128, 0)') || bgColor.includes('#00a400') || 
+                         bgColor.includes('rgb(76, 175, 80)') || bgColor.includes('green');
+          
+          if (isGreen && botao.offsetWidth > 0 && botao.offsetHeight > 0) {
+            console.log('🎯 Encontrado botão por cor verde');
+            botao.click();
+            return true;
+          }
+        }
+        
+        // ESTRATÉGIA 4: Procurar na área inferior da tela (onde geralmente fica o botão)
+        const elementosInferiores = Array.from(document.querySelectorAll('button, div'));
+        const alturaTela = window.innerHeight;
+        
+        for (const elemento of elementosInferiores) {
+          const rect = elemento.getBoundingClientRect();
+          const estaNaParteInferior = rect.top > (alturaTela * 0.6); // 60% da tela para baixo
+          
+          if (estaNaParteInferior && elemento.offsetWidth > 0 && elemento.offsetHeight > 0) {
+            console.log('🎯 Encontrado botão na área inferior');
+            elemento.click();
+            return true;
+          }
+        }
+        
+        console.log('❌ Nenhum botão encontrado');
+        return false;
+      } catch (e) {
+        console.log('Erro ao procurar botão:', e);
+        return false;
+      }
+    });
+    
+    if (botaoEncontrado) {
+      console.log('✅ Botão clicado, aguardando modal abrir...');
+      await delay(5000);
+      
+      // Verificar se o modal abriu
+      const modalAbertoAposClick = await verificarModalAberto(page);
+      if (modalAbertoAposClick) {
+        console.log('✅ Modal aberto com sucesso!');
+        return true;
+      } else {
+        console.log('❌ Modal não abriu após clique');
+        return false;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.log('❌ Erro ao abrir modal:', error.message);
+    return false;
+  }
+}
+
 // 🔥 FUNÇÃO BILÍNGUE PARA OBTER TAREFAS
 async function obterTarefasDisponiveisBilingue(page) {
   try {
     const tarefas = await page.evaluate(() => {
       try {
         const resultados = [];
-        const tarefasElementos = document.querySelectorAll('.e2e_normal_task');
         
-        for (let tarefa of tarefasElementos) {
+        // 🔥 PROCURAR TAREFAS EM DIFERENTES ELEMENTOS
+        const seletoresTarefas = [
+          '.e2e_normal_task',
+          '[class*="task"]',
+          '[class*="mission"]',
+          '.task-item',
+          '.mission-item'
+        ];
+        
+        let todosElementosTarefas = [];
+        
+        for (const seletor of seletoresTarefas) {
+          const elementos = document.querySelectorAll(seletor);
+          if (elementos.length > 0) {
+            console.log(`🔍 Encontrados ${elementos.length} elementos com seletor: ${seletor}`);
+            todosElementosTarefas = todosElementosTarefas.concat(Array.from(elementos));
+          }
+        }
+        
+        // Se não encontrou com seletores específicos, procurar qualquer elemento que pareça tarefa
+        if (todosElementosTarefas.length === 0) {
+          console.log('🔍 Procurando elementos de tarefa genericamente...');
+          const todosElementos = Array.from(document.querySelectorAll('div, li, section'));
+          todosElementosTarefas = todosElementos.filter(el => {
+            const texto = el.textContent || '';
+            return texto.includes('Go') || texto.includes('Ir') || 
+                   texto.includes('coins') || texto.includes('moedas') ||
+                   (el.querySelector('button') && el.offsetWidth > 100);
+          });
+        }
+        
+        console.log(`🔍 Total de elementos de tarefa encontrados: ${todosElementosTarefas.length}`);
+        
+        for (let tarefa of todosElementosTarefas) {
           try {
-            const tituloElement = tarefa.querySelector('.e2e_normal_task_content_title');
-            const botaoElement = tarefa.querySelector('.e2e_normal_task_right_btn');
+            // Tentar encontrar título e botão de formas diferentes
+            let tituloElement = tarefa.querySelector('.e2e_normal_task_content_title');
+            let botaoElement = tarefa.querySelector('.e2e_normal_task_right_btn');
+            
+            // Se não encontrou com classes específicas, procurar genericamente
+            if (!tituloElement || !botaoElement) {
+              const todosBotoes = tarefa.querySelectorAll('button');
+              const botaoIr = Array.from(todosBotoes).find(btn => 
+                btn.textContent?.includes('Go') || btn.textContent?.includes('Ir')
+              );
+              
+              if (botaoIr) {
+                botaoElement = botaoIr;
+                // Tentar encontrar o título perto do botão
+                const elementosTexto = tarefa.querySelectorAll('span, div, p');
+                tituloElement = Array.from(elementosTexto).find(el => 
+                  el.textContent && el.textContent.length > 10 && !el.textContent.includes('Go') && !el.textContent.includes('Ir')
+                );
+              }
+            }
             
             if (tituloElement && botaoElement) {
-              const nomeOriginal = tituloElement.textContent.trim();
+              const nome = tituloElement.textContent.trim();
               const botaoVisivel = botaoElement.offsetWidth > 0 && botaoElement.offsetHeight > 0;
               const botaoHabilitado = botaoElement.style.display !== 'none';
               
@@ -326,7 +492,7 @@ async function obterTarefasDisponiveisBilingue(page) {
               
               if (botaoVisivel && botaoHabilitado && botaoDisponivel) {
                 // 🔥 NORMALIZAR NOME DA TAREFA (PT/EN)
-                let nomeNormalizado = nomeOriginal;
+                let nomeNormalizado = nome;
                 
                 // Mapa de traduções COMPLETO
                 const mapaTarefas = {
@@ -353,10 +519,14 @@ async function obterTarefasDisponiveisBilingue(page) {
                   'daily check-in': 'Check-in Diário',
                   'browse surprise items': 'Explore Itens Surpresa',
                   'view your coins savings recap': 'Veja seu "Extrato de Moedas"',
-                  'view super discounts': 'Veja os super descontos'
+                  'view super discounts': 'Veja os super descontos',
+                  'finish today\'s check-in': 'Check-in Diário',
+                  'browse this page for 15s': 'Veja os super descontos',
+                  'browse 15s to see how much': 'Veja seu "Extrato de Moedas"',
+                  'tap 3 items on this page': 'Explore Itens Surpresa'
                 };
                 
-                const nomeLower = nomeOriginal.toLowerCase();
+                const nomeLower = nome.toLowerCase();
                 for (const [key, value] of Object.entries(mapaTarefas)) {
                   if (nomeLower.includes(key)) {
                     nomeNormalizado = value;
@@ -366,7 +536,7 @@ async function obterTarefasDisponiveisBilingue(page) {
                 
                 resultados.push({
                   nome: nomeNormalizado,
-                  nomeOriginal: nomeOriginal,
+                  nomeOriginal: nome,
                   elemento: 'botao_ir'
                 });
               }
@@ -387,67 +557,6 @@ async function obterTarefasDisponiveisBilingue(page) {
   } catch (error) {
     console.log('❌ Erro ao obter tarefas:', error.message);
     return [];
-  }
-}
-
-// 🔥 ABRIR MODAL DE TAREFAS BILÍNGUE
-async function abrirModalTarefasBilingue(page) {
-  try {
-    const modalAberto = await verificarModalAberto(page);
-    if (modalAberto) return true;
-    
-    // 🔥 TENTAR DIFERENTES SELETORES PARA O BOTÃO DE TAREFAS
-    const botaoEncontrado = await page.evaluate(() => {
-      try {
-        // Tentar diferentes seletores possíveis
-        const seletores = [
-          '#signButton',
-          '[class*="sign"]',
-          '[class*="task"]',
-          '[class*="coin"]',
-          'button',
-          'div[role="button"]'
-        ];
-        
-        for (const seletor of seletores) {
-          const elemento = document.querySelector(seletor);
-          if (elemento && elemento.offsetWidth > 0 && elemento.offsetHeight > 0) {
-            elemento.click();
-            return true;
-          }
-        }
-        
-        // Tentar por texto
-        const elementos = Array.from(document.querySelectorAll('button, div, span'));
-        const textosProcurados = ['tasks', 'tarefas', 'check-in', 'daily', 'diário', 'sign'];
-        
-        for (const elemento of elementos) {
-          const texto = elemento.textContent?.toLowerCase() || '';
-          if (textosProcurados.some(t => texto.includes(t)) && 
-              elemento.offsetWidth > 0 && elemento.offsetHeight > 0) {
-            elemento.click();
-            return true;
-          }
-        }
-        
-        return false;
-      } catch (e) {
-        return false;
-      }
-    });
-    
-    if (botaoEncontrado) {
-      console.log('✅ Botão de tarefas clicado');
-      await delay(5000);
-      
-      const abriu = await verificarModalAberto(page);
-      return abriu;
-    }
-    
-    return false;
-  } catch (error) {
-    console.log('❌ Erro ao abrir modal:', error.message);
-    return false;
   }
 }
 
@@ -515,30 +624,57 @@ async function clicarTarefaEspecificaBilingue(page, nomeTarefa, nomeOriginal) {
   try {
     const sucesso = await page.evaluate((nomeTarefaProcurada, nomeOriginalProcurado) => {
       try {
-        const tarefas = document.querySelectorAll('.e2e_normal_task');
+        // 🔥 PROCURAR EM DIFERENTES ELEMENTOS
+        const seletoresTarefas = [
+          '.e2e_normal_task',
+          '[class*="task"]',
+          '[class*="mission"]',
+          '.task-item'
+        ];
         
-        for (let tarefa of tarefas) {
-          const titulo = tarefa.querySelector('.e2e_normal_task_content_title');
+        let todasTarefas = [];
+        
+        for (const seletor of seletoresTarefas) {
+          const elementos = document.querySelectorAll(seletor);
+          todasTarefas = todasTarefas.concat(Array.from(elementos));
+        }
+        
+        // Se não encontrou, procurar genericamente
+        if (todasTarefas.length === 0) {
+          todasTarefas = Array.from(document.querySelectorAll('div, li'));
+        }
+        
+        for (let tarefa of todasTarefas) {
+          const titulo = tarefa.querySelector('.e2e_normal_task_content_title') || 
+                        Array.from(tarefa.querySelectorAll('span, div, p')).find(el => 
+                          el.textContent && el.textContent.length > 10
+                        );
+          
           if (titulo) {
             const nomeAtual = titulo.textContent.trim();
-            
-            // 🔥 ACEITA TANTO O NOME NORMALIZADO QUANTO O ORIGINAL
-            if (nomeAtual === nomeTarefaProcurada || nomeAtual === nomeOriginalProcurado) {
-              const botaoIr = tarefa.querySelector('.e2e_normal_task_right_btn');
-              if (botaoIr && botaoIr.offsetWidth > 0) {
-                botaoIr.click();
-                return true;
-              }
-            }
-            
-            // 🔥 TAMBÉM TENTA POR CONTEÚDO DE TEXTO
             const nomeAtualLower = nomeAtual.toLowerCase();
             const nomeProcuradoLower = nomeTarefaProcurada.toLowerCase();
             const nomeOriginalLower = nomeOriginalProcurado.toLowerCase();
             
-            if (nomeAtualLower.includes(nomeProcuradoLower) || nomeAtualLower.includes(nomeOriginalLower)) {
-              const botaoIr = tarefa.querySelector('.e2e_normal_task_right_btn');
+            // 🔥 VERIFICAÇÃO FLEXÍVEL
+            const corresponde = nomeAtual === nomeTarefaProcurada || 
+                              nomeAtual === nomeOriginalProcurado ||
+                              nomeAtualLower.includes(nomeProcuradoLower) || 
+                              nomeAtualLower.includes(nomeOriginalLower);
+            
+            if (corresponde) {
+              let botaoIr = tarefa.querySelector('.e2e_normal_task_right_btn');
+              
+              // Se não encontrou botão específico, procurar qualquer botão "Go" ou "Ir"
+              if (!botaoIr) {
+                const todosBotoes = tarefa.querySelectorAll('button');
+                botaoIr = Array.from(todosBotoes).find(btn => 
+                  btn.textContent?.includes('Go') || btn.textContent?.includes('Ir')
+                );
+              }
+              
               if (botaoIr && botaoIr.offsetWidth > 0) {
+                console.log(`🎯 Clicando em: ${nomeAtual}`);
                 botaoIr.click();
                 return true;
               }
@@ -704,15 +840,29 @@ async function verificarModalAberto(page) {
           '[class*="modal"]',
           '[class*="task"]',
           '[class*="coin"]',
-          '.e2e_normal_task'
+          '.e2e_normal_task',
+          '[class*="bottom"]',
+          '[class*="sheet"]'
         ];
         
         for (const seletor of seletoresModal) {
           const modal = document.querySelector(seletor);
           if (modal && modal.offsetWidth > 0 && modal.offsetHeight > 0) {
+            console.log(`✅ Modal detectado com seletor: ${seletor}`);
             return true;
           }
         }
+        
+        // Verificar se há elementos de tarefa visíveis
+        const tarefasVisiveis = document.querySelectorAll('.e2e_normal_task');
+        if (tarefasVisiveis.length > 0) {
+          const primeiraTarefa = tarefasVisiveis[0];
+          if (primeiraTarefa.offsetWidth > 0 && primeiraTarefa.offsetHeight > 0) {
+            console.log('✅ Modal detectado pelas tarefas visíveis');
+            return true;
+          }
+        }
+        
         return false;
       } catch (e) {
         return false;
@@ -796,7 +946,7 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
       console.log(`\n🔁 Execução ${execucao}/2 da tarefa especial...`);
       
       console.log('1. 📱 Abrindo modal de tarefas...');
-      const modalAberto = await abrirModalTarefasBilingue(paginaPrincipal);
+      const modalAberto = await abrirModalTarefasMelhorado(paginaPrincipal);
       if (!modalAberto) continue;
       await delay(3000);
       
