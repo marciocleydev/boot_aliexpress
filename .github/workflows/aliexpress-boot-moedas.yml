@@ -22,15 +22,6 @@ jobs:
       run: |
         npm install
 
-    - name: 🌎 Set system locale to pt_BR
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y locales
-        sudo locale-gen pt_BR.UTF-8
-        sudo update-locale LANG=pt_BR.UTF-8
-        export LANG=pt_BR.UTF-8
-        export LC_ALL=pt_BR.UTF-8
-
     - name: 🚀 Run AliExpress Bot
       env:
         ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
