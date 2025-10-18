@@ -1,9 +1,9 @@
 // scripts/test-tarefas.js
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import UserAgent from 'user-agents';
-import fs from 'fs';
-import path from 'path';
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const UserAgent = require('user-agents');
+const fs = require('fs');
+const path = require('path');
 
 puppeteer.use(StealthPlugin());
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
