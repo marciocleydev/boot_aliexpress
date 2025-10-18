@@ -1,6 +1,7 @@
-import { Octokit } from "@octokit/rest";
-import sodium from "tweetsodium";
-import fs from "fs";
+// scripts/update-secret.js
+const { Octokit } = require("@octokit/rest");
+const sodium = require("tweetsodium");
+const fs = require("fs");
 
 const token = process.env.GH_TOKEN;
 const repo = process.env.GITHUB_REPOSITORY;
