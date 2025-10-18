@@ -52,10 +52,109 @@ async function takeScreenshot(page, description) {
 // 🔥 CONFIGURAÇÃO DE CREDENCIAIS
 const ALIEXPRESS_EMAIL = process.env.ALIEXPRESS_EMAIL;
 const ALIEXPRESS_PASSWORD = process.env.ALIEXPRESS_PASSWORD;
+const ALIEXPRESS_COOKIES_JSON = process.env.ALIEXPRESS_COOKIES_JSON;
 
 console.log('🔐 Configuração de login:');
 console.log('   Email:', ALIEXPRESS_EMAIL ? '*** Configurado ***' : 'Não configurado');
 console.log('   Senha:', ALIEXPRESS_PASSWORD ? '*** Configurada ***' : 'Não configurada');
+console.log('   Cookies:', ALIEXPRESS_COOKIES_JSON ? '*** Disponíveis ***' : 'Não disponíveis');
+
+// 🔥 FUNÇÃO PARA CARREGAR COOKIES DA SECRET DO GITHUB
+async function carregarCookiesDaSecret(page) {
+  try {
+    console.log('🍪 Verificando cookies pré-autenticados...');
+    
+    if (!ALIEXPRESS_COOKIES_JSON) {
+      console.log('ℹ️ Nenhum cookie encontrado na secret, continuando com login normal');
+      return false;
+    }
+    
+    console.log('✅ Cookies encontrados na secret, processando...');
+    
+    // Parse do JSON
+    const cookies = JSON.parse(ALIEXPRESS_COOKIES_JSON);
+    
+    if (!Array.isArray(cookies) || cookies.length === 0) {
+      console.log('❌ Cookies inválidos ou vazios');
+      return false;
+    }
+    
+    console.log(`📦 Carregando ${cookies.length} cookies...`);
+    
+    // Primeiro acessa o domínio
+    await page.goto('https://www.aliexpress.com', { 
+      waitUntil: 'networkidle2',
+      timeout: 15000 
+    });
+    
+    // Adiciona cada cookie
+    let cookiesAdicionados = 0;
+    for (const cookie of cookies) {
+      try {
+        // Remove campos não suportados pelo Puppeteer
+        const cookieParaAdicionar = {
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain,
+          path: cookie.path,
+          secure: cookie.secure || false,
+          httpOnly: cookie.httpOnly || false,
+          sameSite: cookie.sameSite || 'Lax'
+        };
+        
+        // Adiciona expiry se existir
+        if (cookie.expirationDate) {
+          cookieParaAdicionar.expires = Math.floor(cookie.expirationDate);
+        }
+        
+        await page.setCookie(cookieParaAdicionar);
+        cookiesAdicionados++;
+        
+      } catch (error) {
+        console.log(`   ⚠️ Cookie ${cookie.name} ignorado: ${error.message}`);
+      }
+    }
+    
+    console.log(`✅ ${cookiesAdicionados}/${cookies.length} cookies adicionados com sucesso`);
+    
+    // Recarrega a página para aplicar os cookies
+    await page.reload({ waitUntil: 'networkidle2' });
+    await delay(3000);
+    
+    return true;
+    
+  } catch (error) {
+    console.log('❌ Erro ao carregar cookies:', error.message);
+    return false;
+  }
+}
+
+// 🔥 VERIFICAR SE ESTÁ LOGADO
+async function verificarSeEstaLogado(page) {
+  try {
+    await page.goto('https://www.aliexpress.com', { 
+      waitUntil: 'networkidle2',
+      timeout: 10000 
+    });
+    
+    const estaLogado = await page.evaluate(() => {
+      // Verifica se há elementos que indicam que está logado
+      const elementosLogado = [
+        document.querySelector('[data-role="user-nickname"]'),
+        document.querySelector('.user-account'),
+        document.querySelector('[class*="user-info"]'),
+        document.querySelector('[href*="member"]')
+      ];
+      
+      return elementosLogado.some(el => el !== null);
+    });
+    
+    return estaLogado;
+  } catch (error) {
+    console.log('❌ Erro ao verificar login:', error.message);
+    return false;
+  }
+}
 
 async function botEventosReais() {
   const userAgent = new UserAgent({ deviceCategory: 'mobile' });
@@ -126,67 +225,94 @@ async function botEventosReais() {
     console.log('📱 Ambiente configurado!');
     await takeScreenshot(page, 'ambiente-configurado');
 
-    // === LOGIN ===
-    console.log('1. 🔐 Navegando para login...');
-    await page.goto('https://login.aliexpress.com/', { 
-      waitUntil: 'networkidle2',
-      timeout: 30000 
-    });
-    await takeScreenshot(page, 'pagina-login');
-    await delay(4000);
+    // === TENTAR AUTENTICAÇÃO COM COOKIES PRIMEIRO ===
+    console.log('1. 🍪 Tentando autenticação com cookies...');
+    const cookiesCarregados = await carregarCookiesDaSecret(page);
+    
+    let loginRealizado = false;
+    
+    if (cookiesCarregados) {
+      await takeScreenshot(page, 'cookies-carregados');
+      
+      // Verificar se está logado
+      console.log('🔍 Verificando se está autenticado...');
+      const estaLogado = await verificarSeEstaLogado(page);
+      
+      if (estaLogado) {
+        console.log('✅ AUTENTICADO COM SUCESSO VIA COOKIES!');
+        console.log('🚀 Pulando etapa de login...');
+        loginRealizado = true;
+        await takeScreenshot(page, 'autenticado-com-cookies');
+      } else {
+        console.log('❌ Cookies não funcionaram, fazendo login normal...');
+      }
+    } else {
+      console.log('❌ Nenhum cookie disponível, fazendo login normal...');
+    }
 
-    // Email
-    console.log('2. 📧 Inserindo email...');
-    const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
-    if (emailInput) {
-      await emailInput.type(ALIEXPRESS_EMAIL, { delay: 100 });
-      await takeScreenshot(page, 'email-inserido');
+    // === LOGIN NORMAL (SE OS COOKIES FALHAREM) ===
+    if (!loginRealizado) {
+      console.log('2. 🔐 Fazendo login manual...');
+      await page.goto('https://login.aliexpress.com/', { 
+        waitUntil: 'networkidle2',
+        timeout: 30000 
+      });
+      await takeScreenshot(page, 'pagina-login');
+      await delay(4000);
+
+      // Email
+      console.log('3. 📧 Inserindo email...');
+      const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
+      if (emailInput) {
+        await emailInput.type(ALIEXPRESS_EMAIL, { delay: 100 });
+        await takeScreenshot(page, 'email-inserido');
+        await delay(2000);
+        await page.keyboard.press('Tab');
+      }
+
       await delay(2000);
-      await page.keyboard.press('Tab');
-    }
 
-    await delay(2000);
-
-    const continueBtn = await page.evaluateHandle(() => {
-      const botoes = Array.from(document.querySelectorAll('button'));
-      return botoes.find(btn => {
-        const texto = btn.textContent?.toLowerCase() || '';
-        return texto.includes('continue') || texto.includes('continuar');
+      const continueBtn = await page.evaluateHandle(() => {
+        const botoes = Array.from(document.querySelectorAll('button'));
+        return botoes.find(btn => {
+          const texto = btn.textContent?.toLowerCase() || '';
+          return texto.includes('continue') || texto.includes('continuar');
+        });
       });
-    });
-    if (continueBtn.asElement()) {
-      await continueBtn.asElement().click();
-      await takeScreenshot(page, 'clicou-continuar');
-    }
+      if (continueBtn.asElement()) {
+        await continueBtn.asElement().click();
+        await takeScreenshot(page, 'clicou-continuar');
+      }
 
-    await delay(5000);
+      await delay(5000);
 
-    const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
-    if (senhaInput) {
-      await senhaInput.type(ALIEXPRESS_PASSWORD, { delay: 80 });
-      await takeScreenshot(page, 'senha-inserida');
-    }
+      const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
+      if (senhaInput) {
+        await senhaInput.type(ALIEXPRESS_PASSWORD, { delay: 80 });
+        await takeScreenshot(page, 'senha-inserida');
+      }
 
-    await delay(2000);
+      await delay(2000);
 
-    const signInBtn = await page.evaluateHandle(() => {
-      const botoes = Array.from(document.querySelectorAll('button'));
-      return botoes.find(btn => {
-        const texto = btn.textContent?.toLowerCase() || '';
-        return texto.includes('sign in') || texto.includes('login') || texto.includes('entrar');
+      const signInBtn = await page.evaluateHandle(() => {
+        const botoes = Array.from(document.querySelectorAll('button'));
+        return botoes.find(btn => {
+          const texto = btn.textContent?.toLowerCase() || '';
+          return texto.includes('sign in') || texto.includes('login') || texto.includes('entrar');
+        });
       });
-    });
-    if (signInBtn.asElement()) {
-      await signInBtn.asElement().click();
-      await takeScreenshot(page, 'clicou-login');
+      if (signInBtn.asElement()) {
+        await signInBtn.asElement().click();
+        await takeScreenshot(page, 'clicou-login');
+      }
+
+      console.log('⏳ Aguardando login... 15 segundos');
+      await delay(15000);
+      await takeScreenshot(page, 'apos-login');
     }
 
-    console.log('⏳ Aguardando login... 15 segundos');
-    await delay(15000);
-    await takeScreenshot(page, 'apos-login');
-
-    // Navegar para moedas
-    console.log('6. 🪙 Indo para moedas...');
+    // === PÓS-AUTENTICAÇÃO (APÓS COOKIES OU LOGIN MANUAL) ===
+    console.log('4. 🪙 Indo para moedas...');
     await page.goto(URL_MOEDAS, {
       waitUntil: 'networkidle2',
       timeout: 20000
@@ -201,7 +327,7 @@ async function botEventosReais() {
     await delay(3000);
 
     // === ESTRATÉGIA COM TEMPO LIMITE DE 4 MINUTOS ===
-    console.log('7. 🔥 Iniciando execução com tempo limite de 4 minutos...\n');
+    console.log('5. 🔥 Iniciando execução com tempo limite de 4 minutos...\n');
     
     // 🔥 COLETAR MOEDAS DIÁRIAS SE DISPONÍVEL
     await coletarMoedasDiarias(page);
@@ -491,8 +617,6 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   }
 }
 
-
-
 // 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - INGLÊS - AGORA 4 PRODUTOS
 async function executarBrowseSurpriseItems(page, urlMoedas) {
   console.log('   🎁 Executando browse surprise items (4 produtos)...');
@@ -564,10 +688,6 @@ async function executarBrowseSurpriseItems(page, urlMoedas) {
   console.log('   🔄 Voltando para moedas...');
   await voltarParaMoedas(page, urlMoedas);
 }
-
-
-
-
 
 // 🔥 EXECUTAR PESQUISA - INGLÊS
 async function executarPesquisa(page, urlMoedas) {
