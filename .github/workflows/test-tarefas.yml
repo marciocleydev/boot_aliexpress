@@ -61,3 +61,18 @@ jobs:
         GITHUB_REPOSITORY: ${{ github.repository }}
       run: node scripts/update-secret.js
 
+    - name: 🔍 Debug - Verificar arquivos
+      if: always()
+      run: |
+        echo "📁 Conteúdo do diretório:"
+        ls -la
+        echo "📄 Verificando cookies:"
+        if [ -f cookies_atualizados.json ]; then
+          echo "✅ cookies_atualizados.json existe!"
+          echo "📊 Tamanho do arquivo: $(wc -c < cookies_atualizados.json) bytes"
+          echo "📋 Primeiras 200 caracteres:"
+          head -c 200 cookies_atualizados.json
+        else
+          echo "❌ cookies_atualizados.json NÃO existe"
+        fi
+
