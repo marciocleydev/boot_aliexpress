@@ -1,5 +1,5 @@
-
 {
+  "type": "module",
   "name": "bot-aliexpress",
   "version": "1.0.0",
   "description": "Bot para AliExpress em português",
