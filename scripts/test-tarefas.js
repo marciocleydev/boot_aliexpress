@@ -305,6 +305,73 @@ async function botEventosReais() {
     await takeScreenshot(page, 'apos-remover-popup');
     await delay(3000);
 
+
+
+
+
+
+    // 🔥 SALVAR COOKIES ATUALIZADOS (CORREÇÃO DEFINITIVA)
+try {
+  console.log('💾 Tentando salvar cookies atualizados...');
+  
+  // Aguarda mais tempo e verifica se a página ainda está acessível
+  await delay(3000);
+  
+  // Verifica se o browser ainda está conectado
+  if (!browser.isConnected()) {
+    console.log('⚠️ Browser já fechado, não é possível salvar cookies');
+    return;
+  }
+  
+  // Tenta obter cookies de uma página válida
+  const currentUrl = page.url();
+  console.log(`📄 URL atual: ${currentUrl}`);
+  
+  // Se a página não estiver acessível, vai para uma URL simples primeiro
+  if (!currentUrl || currentUrl === 'about:blank') {
+    console.log('🔄 Navegando para página inicial para obter cookies...');
+    await page.goto('https://www.aliexpress.com', { 
+      waitUntil: 'domcontentloaded', 
+      timeout: 10000 
+    });
+    await delay(2000);
+  }
+  
+  const cookies = await page.cookies();
+  
+  if (cookies && cookies.length > 0) {
+    fs.writeFileSync('cookies_atualizados.json', JSON.stringify(cookies, null, 2));
+    console.log('🍪 Cookies atualizados salvos localmente!');
+    console.log(`📊 ${cookies.length} cookies salvos`);
+    
+    // Log dos domínios dos cookies para debug
+    const domains = [...new Set(cookies.map(cookie => cookie.domain))];
+    console.log(`🌐 Domínios: ${domains.join(', ')}`);
+  } else {
+    console.log('⚠️ Nenhum cookie encontrado para salvar');
+  }
+} catch (e) {
+  console.log('⚠️ Erro ao salvar cookies atualizados:', e.message);
+  
+  // Tenta uma abordagem alternativa
+  try {
+    console.log('🔄 Tentando abordagem alternativa para salvar cookies...');
+    const altCookies = await page.cookies();
+    if (altCookies.length > 0) {
+      fs.writeFileSync('cookies_atualizados.json', JSON.stringify(altCookies, null, 2));
+      console.log('✅ Cookies salvos com abordagem alternativa!');
+    }
+  } catch (altError) {
+    console.log('❌ Falha na abordagem alternativa:', altError.message);
+  }
+}
+
+
+
+
+
+    
+
     // === ESTRATÉGIA COM TEMPO LIMITE DE 4 MINUTOS ===
     console.log('3. 🔥 Iniciando execução com tempo limite de 4 minutos...\n');
     
@@ -313,7 +380,7 @@ async function botEventosReais() {
     await takeScreenshot(page, 'apos-coletar-moedas');
     
     // 🔥 TEMPO LIMITE DE 2.5 MINUTOS (150 segundos)
-    const tempoLimite = 0.2 * 60 * 1000; // 2.5 minutos em milissegundos
+    const tempoLimite = 1.5 * 60 * 1000; // 2.5 minutos em milissegundos
     const inicio = Date.now();
     
     // 🔥 EXECUTAR LOOP POR ATÉ 4 MINUTOS
@@ -467,68 +534,7 @@ async function botEventosReais() {
       }
     } catch (error) {
       console.log('❌ Nenhum screenshot encontrado ou erro ao listar:', error.message);
-    }
-    
-
-
-// 🔥 SALVAR COOKIES ATUALIZADOS (CORREÇÃO DEFINITIVA)
-try {
-  console.log('💾 Tentando salvar cookies atualizados...');
-  
-  // Aguarda mais tempo e verifica se a página ainda está acessível
-  await delay(3000);
-  
-  // Verifica se o browser ainda está conectado
-  if (!browser.isConnected()) {
-    console.log('⚠️ Browser já fechado, não é possível salvar cookies');
-    return;
-  }
-  
-  // Tenta obter cookies de uma página válida
-  const currentUrl = page.url();
-  console.log(`📄 URL atual: ${currentUrl}`);
-  
-  // Se a página não estiver acessível, vai para uma URL simples primeiro
-  if (!currentUrl || currentUrl === 'about:blank') {
-    console.log('🔄 Navegando para página inicial para obter cookies...');
-    await page.goto('https://www.aliexpress.com', { 
-      waitUntil: 'domcontentloaded', 
-      timeout: 10000 
-    });
-    await delay(2000);
-  }
-  
-  const cookies = await page.cookies();
-  
-  if (cookies && cookies.length > 0) {
-    fs.writeFileSync('cookies_atualizados.json', JSON.stringify(cookies, null, 2));
-    console.log('🍪 Cookies atualizados salvos localmente!');
-    console.log(`📊 ${cookies.length} cookies salvos`);
-    
-    // Log dos domínios dos cookies para debug
-    const domains = [...new Set(cookies.map(cookie => cookie.domain))];
-    console.log(`🌐 Domínios: ${domains.join(', ')}`);
-  } else {
-    console.log('⚠️ Nenhum cookie encontrado para salvar');
-  }
-} catch (e) {
-  console.log('⚠️ Erro ao salvar cookies atualizados:', e.message);
-  
-  // Tenta uma abordagem alternativa
-  try {
-    console.log('🔄 Tentando abordagem alternativa para salvar cookies...');
-    const altCookies = await page.cookies();
-    if (altCookies.length > 0) {
-      fs.writeFileSync('cookies_atualizados.json', JSON.stringify(altCookies, null, 2));
-      console.log('✅ Cookies salvos com abordagem alternativa!');
-    }
-  } catch (altError) {
-    console.log('❌ Falha na abordagem alternativa:', altError.message);
-  }
-}
-
-
-    
+    } 
     
     await browser.close();
     console.log('🔚 Navegador fechado.');
