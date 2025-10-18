@@ -3,10 +3,10 @@
   "name": "bot-aliexpress",
   "version": "1.0.0",
   "description": "Bot para AliExpress em português",
-  "main": "scripts/bot-ali-gh-actions.js",
+  "main": "scripts/test-tarefas.js",
   "scripts": {
-    "start": "node scripts/bot-ali-gh-actions.js",
-    "github": "node scripts/bot-ali-gh-actions.js"
+    "start": "node scripts/test-tarefas.js",
+    "github": "node scripts/test-tarefas.js"
   },
   "dependencies": {
     "puppeteer": "^21.0.0",
