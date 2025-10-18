@@ -1,44 +1,49 @@
-name: test-tarefas
+name: Bot AliExpress
 
 on:
-  schedule:
-    - cron: '0 7 * * *'  # 7:00 AM UTC (4:00 AM BRT)
   workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'  # Executa todo dia às 8h UTC
 
 jobs:
-  collect-coins:
+  run-bot:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+    - name: Checkout código
+      uses: actions/checkout@v3
 
-    - name: ⎔ Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
       with:
         node-version: '18'
+        cache: 'npm'
 
-    - name: 📦 Install dependencies
+    - name: Instalar dependências
+      run: npm install
+
+    - name: Instalar Chrome
       run: |
-        npm install
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
 
-    - name: 🚀 Run AliExpress Bot
+    - name: Configurar locale pt-BR
+      run: |
+        sudo locale-gen pt_BR.UTF-8
+        echo "LC_ALL=pt_BR.UTF-8" >> $GITHUB_ENV
+        echo "LANG=pt_BR.UTF-8" >> $GITHUB_ENV
+        echo "LANGUAGE=pt_BR:pt:en" >> $GITHUB_ENV
+
+    - name: Executar bot
       env:
-        ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
-        ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
+        CI: true
       run: node scripts/test-tarefas.js
 
-    - name: 📤 Upload screenshots
-      uses: actions/upload-artifact@v4
+    - name: Upload logs (opcional)
       if: always()
+      uses: actions/upload-artifact@v3
       with:
-        name: bot-screenshots
-        path: screenshots/
-        retention-days: 7
-
-    - name: 📋 Show summary
-      if: always()
-      run: |
-        echo "✅ Execução do bot finalizada!"
-        echo "📸 Screenshots disponíveis para download acima"
-        echo "🔄 Próxima execução: 7:00 AM UTC"
+        name: bot-logs
+        path: |
+          *.log
+        retention-days: 1
