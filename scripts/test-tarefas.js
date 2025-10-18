@@ -1109,4 +1109,4 @@ if (require.main === module) {
   botEventosReais().catch(console.error);
 }
 
-module.exports = { botEventosRealis };
+module.exports = { botEventosReais };
