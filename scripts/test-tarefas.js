@@ -73,7 +73,6 @@ async function botEventosReais() {
       hasTouch: true
     },
     args: [
-      '--lang=pt-BR', // 🔥 FORÇAR IDIOMA PORTUGUÊS NO CHROME
       '--window-size=390,844',
       '--disable-blink-features=AutomationControlled',
       '--disable-notifications',
@@ -89,18 +88,13 @@ async function botEventosReais() {
 
   const page = await browser.newPage();
 
-  // 🔥 FORÇAR IDIOMA PORTUGUÊS VIA HEADERS HTTP
-  await page.setExtraHTTPHeaders({
-    'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8' // 🔥 PRIORIDADE PARA PORTUGUÊS
-  });
-
-  // 🔥 URL DA PÁGINA DE MOEDAS FORÇANDO IDIOMA
-  const URL_MOEDAS = 'https://m.aliexpress.com/p/coin-index/index.html?language=pt_BR&utm=botdoafiliado&_immersiveMode=true&from=syicon&t=botmoedas&tt=CPS_NORMAL&_mobile=1&_is_mobile=1';
+  // 🔥 URL DA PÁGINA DE MOEDAS
+  const URL_MOEDAS = 'https://m.aliexpress.com/p/coin-index/index.html?utm=botdoafiliado&_immersiveMode=true&from=syicon&t=botmoedas&tt=CPS_NORMAL&_mobile=1&_is_mobile=1';
 
   // 🔥 SISTEMA INTELIGENTE - SÓ MARCA COMO CONCLUÍDA QUANDO REALMENTE TERMINOU
   const tarefasConcluidas = new Set();
   const contadorTarefas = new Map(); // Conta quantas vezes cada tarefa foi executada
-  const tarefasMultiplas = new Set(['View Super discounts', 'Explore sponsored items', 'Ver Super descontos', 'Explorar itens patrocinados']); // Tarefas que precisam de múltiplas execuções
+  const tarefasMultiplas = new Set(['View Super discounts', 'Explore sponsored items']); // Tarefas que precisam de múltiplas execuções
 
   try {
     // 🔥 INTERCEPTA ABERTURA DE NOVAS ABAS
@@ -133,13 +127,6 @@ async function botEventosReais() {
     });
 
     console.log('📱 Ambiente configurado!');
-
-    // === VERIFICAR IDIOMA DA PÁGINA ===
-    console.log('🌎 Verificando idioma da página...');
-    await page.goto('https://m.aliexpress.com', { waitUntil: 'domcontentloaded' });
-    const lang = await page.evaluate(() => document.documentElement.lang);
-    console.log('🌎 Idioma detectado na página:', lang);
-    await takeScreenshot(page, 'verificacao-idioma');
 
     // === LOGIN ===
     console.log('1. 🔐 Navegando para login...');
@@ -208,10 +195,6 @@ async function botEventosReais() {
     });
     await takeScreenshot(page, 'pagina-moedas');
 
-    // Verificar idioma novamente após login
-    const langPosLogin = await page.evaluate(() => document.documentElement.lang);
-    console.log('🌎 Idioma após login:', langPosLogin);
-
     // Remover popup de senha
     console.log('🗑️ Removendo popup de senha...');
     await delay(10000);
@@ -227,7 +210,7 @@ async function botEventosReais() {
     await takeScreenshot(page, 'apos-coletar-moedas');
     
     // 🔥 TEMPO LIMITE DE 2.5 MINUTOS (150 segundos)
-    const tempoLimite = 1.0 * 60 * 1000; // 2.5 minutos em milissegundos
+    const tempoLimite = 0.3 * 60 * 1000; // 2.5 minutos em milissegundos
     const inicio = Date.now();
     
     // 🔥 EXECUTAR LOOP POR ATÉ 4 MINUTOS
@@ -248,7 +231,7 @@ async function botEventosReais() {
       
       await takeScreenshot(page, 'modal-aberto');
       
-      // 🔥 OBTER TAREFAS DISPONÍVEIS (EXCLUINDO JOGOS) - COMPATÍVEL COM PORTUGUÊS E INGLÊS
+      // 🔥 OBTER TAREFAS DISPONÍVEIS (EXCLUINDO JOGOS) - ATUALIZADO PARA INGLÊS
       let tarefasDisponiveis = [];
       try {
         tarefasDisponiveis = await obterTarefasDisponiveis(page);
@@ -266,13 +249,17 @@ async function botEventosReais() {
         continue;
       }
       
-      // 🔥 FILTRAR TAREFAS - REMOVER JOGOS (COMPATÍVEL AMBOS IDIOMAS)
+      // 🔥 FILTRAR TAREFAS - REMOVER JOGOS
       const tarefasFiltradas = tarefasDisponiveis.filter(tarefa => {
         if (!tarefa || !tarefa.nome) return false;
         
-        // 🔥 EXCLUIR TAREFAS DE JOGO (PORTUGUÊS E INGLÊS)
-        const palavrasJogo = ['Tente sua sorte', 'Try your luck', 'Merge Boss', 'game', 'jogo', 'Prize Land', 'tentar sorte'];
-        if (palavrasJogo.some(palavra => tarefa.nome.includes(palavra))) {
+        // 🔥 EXCLUIR TAREFAS DE JOGO
+        if (tarefa.nome.includes('Tente sua sorte') || 
+            tarefa.nome.includes('Try your luck') ||
+            tarefa.nome.includes('Merge Boss') ||
+            tarefa.nome.includes('game') ||
+            tarefa.nome.includes('jogo') ||
+            tarefa.nome.includes('Prize Land')) {
           console.log(`🚫 Ignorando tarefa de jogo: ${tarefa.nome}`);
           return false;
         }
@@ -318,7 +305,7 @@ async function botEventosReais() {
           tarefasExecutadas++;
           
           // 🔥 SISTEMA INTELIGENTE - SÓ MARCA COMO CONCLUÍDA QUANDO REALMENTE TERMINOU
-          if (tarefa.nome.includes('Browse surprise items') || tarefa.nome.includes('Navegar por itens surpresa')) {
+          if (tarefa.nome.includes('Browse surprise items')) {
             // "Browse surprise items" precisa de 2 execuções
             if (execucoes + 1 >= 2) {
               console.log(`🎉 ${tarefa.nome} - 2 EXECUÇÕES COMPLETAS! Marcando como CONCLUÍDA`);
@@ -354,7 +341,7 @@ async function botEventosReais() {
     console.log('   - Tarefas completamente concluídas:', Array.from(tarefasConcluidas));
     console.log('   - Contador de execuções por tarefa:', Object.fromEntries(contadorTarefas));
 
-    // 🔥 EXECUÇÃO ESPECIAL PARA "BROWSE SURPRISE ITEMS" / "NAVEGAR POR ITENS SURPRESA"
+    // 🔥 EXECUÇÃO ESPECIAL PARA "BROWSE SURPRISE ITEMS"
     await executarBrowseSurpriseItemsFinal(page, URL_MOEDAS);
 
     console.log('\n🏁 TODAS AS TAREFAS FINALIZADAS!');
@@ -386,25 +373,24 @@ async function botEventosReais() {
   }
 }
 
-// 🔥 OBTER TAREFAS DISPONÍVEIS (COMPATÍVEL COM PORTUGUÊS E INGLÊS)
+// 🔥 OBTER TAREFAS DISPONÍVEIS (ATUALIZADO PARA INGLÊS)
 async function obterTarefasDisponiveis(page) {
   try {
     const tarefas = await page.evaluate(() => {
       try {
         const resultados = [];
         
-        // 🔥 ESTRATÉGIA MAIS AMPLA - PROCURA POR TODOS OS BOTÕES "Go" EM AMBOS IDIOMAS
+        // 🔥 ESTRATÉGIA MAIS AMPLA - PROCURA POR TODOS OS BOTÕES "Go"
         const todosBotoes = Array.from(document.querySelectorAll('button'));
         const botoesGo = todosBotoes.filter(btn => {
           const texto = btn.textContent?.trim() || '';
-          // 🔥 ACEITA "Go", "GO", "Ir" - AMBOS IDIOMAS
-          return ['Go', 'GO', 'Ir'].includes(texto) && 
+          return texto === 'Go' && 
                  btn.offsetWidth > 0 && 
                  btn.offsetHeight > 0 &&
                  btn.disabled !== true;
         });
         
-        console.log(`🔍 Encontrados ${botoesGo.length} botões "Go/Ir"`);
+        console.log(`🔍 Encontrados ${botoesGo.length} botões "Go"`);
         
         for (let btn of botoesGo) {
           try {
@@ -416,10 +402,8 @@ async function obterTarefasDisponiveis(page) {
                 const texto = el.textContent?.trim() || '';
                 return texto.length > 10 && 
                        !texto.includes('Go') && 
-                       !texto.includes('Ir') &&
                        !texto.includes('+') &&
                        !texto.includes('coins') &&
-                       !texto.includes('moedas') &&
                        !texto.includes('Coins');
               });
               
@@ -462,21 +446,21 @@ async function obterTarefasDisponiveis(page) {
   }
 }
 
-// 🔥 CLICAR TAREFA ESPECÍFICA (COMPATÍVEL COM PORTUGUÊS E INGLÊS)
+// 🔥 CLICAR TAREFA ESPECÍFICA (ATUALIZADO PARA INGLÊS)
 async function clicarTarefaEspecifica(page, nomeTarefa) {
   try {
     console.log(`   🔍 DEBUG: Procurando tarefa: "${nomeTarefa}"`);
     
     const sucesso = await page.evaluate((nome) => {
       try {
-        // 🔥 ESTRATÉGIA: PROCURA POR BOTÕES "Go/Ir" E VERIFICA O TEXTO DA TAREFA PRÓXIMO
+        // 🔥 ESTRATÉGIA: PROCURA POR BOTÕES "Go" E VERIFICA O TEXTO DA TAREFA PRÓXIMO
         const todosBotoes = Array.from(document.querySelectorAll('button'));
         const botoesGo = todosBotoes.filter(btn => {
           const texto = btn.textContent?.trim() || '';
-          return ['Go', 'GO', 'Ir'].includes(texto) && btn.offsetWidth > 0;
+          return texto === 'Go' && btn.offsetWidth > 0;
         });
         
-        console.log(`🔍 DEBUG: ${botoesGo.length} botões "Go/Ir" encontrados`);
+        console.log(`🔍 DEBUG: ${botoesGo.length} botões "Go" encontrados`);
         
         for (let btn of botoesGo) {
           const container = btn.closest('div, li, section, [class*="task"], [class*="item"]');
@@ -485,21 +469,15 @@ async function clicarTarefaEspecifica(page, nomeTarefa) {
               const texto = el.textContent?.trim() || '';
               return texto.length > 10 && 
                      !texto.includes('Go') && 
-                     !texto.includes('Ir') &&
                      !texto.includes('+') &&
-                     !texto.includes('coins') &&
-                     !texto.includes('moedas');
+                     !texto.includes('coins');
             });
             
             if (textos.length > 0) {
               const textoEncontrado = textos[0].textContent.trim();
               console.log(`🔍 DEBUG: Comparando "${textoEncontrado}" com "${nome}"`);
               
-              // 🔥 BUSCA POR FRAGMENTO (NÃO EXATO) - COMPATÍVEL AMBOS IDIOMAS
-              const fragmentoAlvo = nome.toLowerCase().slice(0, 10);
-              const fragmentoEncontrado = textoEncontrado.toLowerCase().slice(0, 10);
-              
-              if (textoEncontrado.toLowerCase().includes(nome.toLowerCase().slice(0, 10))) {
+              if (textoEncontrado === nome) {
                 console.log(`✅ DEBUG: ENCONTROU! Clicando em: ${nome}`);
                 btn.click();
                 return true;
@@ -523,7 +501,7 @@ async function clicarTarefaEspecifica(page, nomeTarefa) {
   }
 }
 
-// 🔥 EXECUTAR TAREFA ESPECÍFICA (COMPATÍVEL COM PORTUGUÊS E INGLÊS)
+// 🔥 EXECUTAR TAREFA ESPECÍFICA (ATUALIZADO PARA INGLÊS)
 async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   try {
     // 🔥 CLICAR NA TAREFA ESPECÍFICA
@@ -546,15 +524,13 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
       console.log(`   📱 Navegou para tarefa`);
       await takeScreenshot(page, `pagina-tarefa-${tarefa.nome.substring(0, 10).replace(/[^a-zA-Z0-9]/g, '')}`);
       
-      // 🔥 IDENTIFICAR TIPO DE TAREFA PELO NOME (COMPATÍVEL AMBOS IDIOMAS)
-      if (tarefa.nome.includes('Browse surprise items') || tarefa.nome.includes('Navegar por itens surpresa')) {
+      // 🔥 IDENTIFICAR TIPO DE TAREFA PELO NOME (INGLÊS)
+      if (tarefa.nome.includes('Browse surprise items')) {
         await executarBrowseSurpriseItems(page, urlMoedas);
-      } else if (tarefa.nome.includes('Find what you like') || tarefa.nome.includes('Encontrar o que você gosta')) {
+      } else if (tarefa.nome.includes('Find what you like')) {
         await executarPesquisa(page, urlMoedas);
       } else if (tarefa.nome.includes('View Super discounts') || 
                  tarefa.nome.includes('Explore sponsored items') ||
-                 tarefa.nome.includes('Ver Super descontos') ||
-                 tarefa.nome.includes('Explorar itens patrocinados') ||
                  tarefa.nome.includes('Discount hunt') ||
                  tarefa.nome.includes('Coupons and credits')) {
         // Tarefas com espera de 19 segundos
@@ -562,7 +538,7 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
         await delay(19000);
         await takeScreenshot(page, `antes-voltar-${tarefa.nome.substring(0, 10).replace(/[^a-zA-Z0-9]/g, '')}`);
         await voltarParaMoedas(page, urlMoedas);
-      } else if (tarefa.nome.includes('Coins Savings Recap') || tarefa.nome.includes('Resumo de economia de moedas')) {
+      } else if (tarefa.nome.includes('Coins Savings Recap')) {
         // Tarefa extrato de moedas (15 segundos)
         console.log('   ⏳ Aguardando 15s...');
         await delay(15000);
@@ -590,7 +566,7 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   }
 }
 
-// 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - COMPATÍVEL AMBOS IDIOMAS
+// 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - ATUALIZADO PARA INGLÊS
 async function executarBrowseSurpriseItems(page, urlMoedas) {
   console.log('   🎁 Executando browse surprise items (3 produtos)...');
   
@@ -637,7 +613,7 @@ async function executarBrowseSurpriseItems(page, urlMoedas) {
     }, i);
 
     if (clicked) {
-      console.log(`   ✅ Produto ${i} clicado!`);
+      console.log(`   ✅ Produto ${i} clicado`);
       await delay(4000);
       await takeScreenshot(page, `produto-${i}-clicado`);
       
@@ -662,7 +638,7 @@ async function executarBrowseSurpriseItems(page, urlMoedas) {
   await voltarParaMoedas(page, urlMoedas);
 }
 
-// 🔥 EXECUTAR PESQUISA - COMPATÍVEL AMBOS IDIOMAS
+// 🔥 EXECUTAR PESQUISA - ATUALIZADO PARA INGLÊS
 async function executarPesquisa(page, urlMoedas) {
   console.log('   🔍 Executando pesquisa...');
   await delay(5000);
@@ -731,7 +707,7 @@ async function voltarParaMoedas(page, urlMoedas) {
   }
 }
 
-// 🔥 COLETAR MOEDAS DIÁRIAS (COMPATÍVEL AMBOS IDIOMAS)
+// 🔥 COLETAR MOEDAS DIÁRIAS
 async function coletarMoedasDiarias(page) {
   try {
     console.log('💰 Verificando moedas para coletar...');
@@ -741,7 +717,6 @@ async function coletarMoedasDiarias(page) {
       
       for (let btn of botoes) {
         const texto = btn.textContent?.toLowerCase() || '';
-        // 🔥 ACEITA "coletar" E "collect"
         if (texto.includes('coletar') || texto.includes('collect')) {
           btn.click();
           return true;
@@ -755,91 +730,296 @@ async function coletarMoedasDiarias(page) {
       await delay(3000);
     }
   } catch (error) {
-    console.log('❌ Erro ao coletar moedas:', error.message);
+    // Ignora erro
   }
 }
 
 // 🔥 ABRIR MODAL DE TAREFAS
 async function abrirModalTarefas(page) {
   try {
-    console.log('📋 Abrindo modal de tarefas...');
-    
-    const abriu = await page.evaluate(() => {
-      const botoes = Array.from(document.querySelectorAll('button, div, span'));
-      
-      for (let btn of botoes) {
-        const texto = btn.textContent?.toLowerCase() || '';
-        // 🔥 ACEITA "tarefas", "tasks", "fazer tarefas", "do tasks"
-        if (texto.includes('tarefa') || texto.includes('task') || texto.includes('fazer tarefa') || texto.includes('do task')) {
-          btn.click();
-          return true;
-        }
-      }
-      return false;
-    });
-
-    if (abriu) {
-      console.log('✅ Modal aberto!');
-      await delay(3000);
+    const modalAberto = await verificarModalAberto(page);
+    if (modalAberto) {
       return true;
-    } else {
-      console.log('❌ Não encontrou botão do modal');
-      return false;
     }
+    
+    await page.click('#signButton');
+    await delay(5000);
+    
+    const abriu = await verificarModalAberto(page);
+    return abriu;
   } catch (error) {
     console.log('❌ Erro ao abrir modal:', error.message);
     return false;
   }
 }
 
-// 🔥 REMOVER POPUP SALVAR SENHA (AGRESSIVO)
-async function removerPopupSalvarSenhaAgressivo(page) {
+// 🔥 FUNÇÕES AUXILIARES
+async function verificarModalAberto(page) {
   try {
-    await page.evaluate(() => {
-      const elementos = Array.from(document.querySelectorAll('*'));
-      
-      for (let el of elementos) {
-        const texto = el.textContent?.toLowerCase() || '';
-        if (texto.includes('save') || texto.includes('salvar') || texto.includes('password') || texto.includes('senha')) {
-          const btnFechar = el.closest('div, dialog, section')?.querySelector('button, [role="button"], [class*="close"], [class*="cancel"]');
-          if (btnFechar) {
-            btnFechar.click();
-            return;
-          }
-        }
+    return await page.evaluate(() => {
+      try {
+        const modal = document.querySelector('.aecoin-main-bottom-2_eZO');
+        return modal && modal.offsetWidth > 0 && modal.offsetHeight > 0;
+      } catch (e) {
+        return false;
       }
     });
   } catch (error) {
-    // Ignora erros
+    return false;
   }
 }
 
-// 🔥 EXECUTAR BROWSE SURPRISE ITEMS FINAL (APÓS TEMPO LIMITE)
+async function removerPopupSalvarSenhaAgressivo(page) {
+  try {
+    const popupFechado = await page.evaluate(() => {
+      try {
+        // 🔥 PRIMEIRO: Tenta encontrar e clicar no "X" para fechar
+        const elementosFechar = Array.from(document.querySelectorAll('div, button, span'));
+        const xButtons = elementosFechar.filter(el => {
+          const texto = el.textContent?.trim() || '';
+          const html = el.innerHTML?.toLowerCase() || '';
+          
+          // Procura por "X", ícones de fechar, ou elementos com classes de fechar
+          return texto === '×' || texto === '✕' || texto === '✖' || 
+                 texto === 'X' || html.includes('close') || 
+                 html.includes('fechar') || el.className.includes('close') ||
+                 el.getAttribute('aria-label')?.toLowerCase().includes('close');
+        });
+        
+        if (xButtons.length > 0) {
+          for (let xBtn of xButtons) {
+            if (xBtn.offsetWidth > 0 && xBtn.offsetHeight > 0) {
+              xBtn.click();
+              return true;
+            }
+          }
+        }
+        
+        // 🔥 SEGUNDO: Tenta clicar em áreas vazias/overlay para fechar
+        const overlays = Array.from(document.querySelectorAll('div[style*="background"], div[class*="overlay"], div[class*="mask"]'));
+        for (let overlay of overlays) {
+          const style = window.getComputedStyle(overlay);
+          if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && 
+              style.position === 'fixed' && 
+              overlay.offsetWidth > 100) {
+            overlay.click();
+            return true;
+          }
+        }
+        
+        // 🔥 TERCEIRO: Tenta botões de texto ("never", "nunca", etc)
+        const textosParaClicar = ['never', 'nunca', 'not now', 'agora não', 'cancelar', 'cancel', 'later', 'depois'];
+        const todosBotoes = Array.from(document.querySelectorAll('button, div, span, a'));
+        
+        for (let btn of todosBotoes) {
+          const texto = btn.textContent?.toLowerCase() || '';
+          for (let textoAlvo of textosParaClicar) {
+            if (texto.includes(textoAlvo) && btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+              btn.click();
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    if (popupFechado) {
+      console.log('✅ Popup fechado com sucesso');
+      await delay(2000);
+    } else {
+      console.log('ℹ️ Nenhum popup encontrado para fechar');
+    }
+  } catch (error) {
+    console.log('ℹ️ Erro ao tentar fechar popup:', error.message);
+  }
+}
+
+// 🔥 FUNÇÃO EXCLUSIVA PARA BROWSE SURPRISE ITEMS - AJUSTE FINAL - ATUALIZADO PARA INGLÊS
 async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
-  console.log('\n🎁 EXECUÇÃO FINAL: Browse Surprise Items (3 produtos)...');
+  console.log('\n🎯 INICIANDO EXECUÇÃO ESPECIAL PARA "BROWSE SURPRISE ITEMS"');
   
   try {
-    // Abrir modal de tarefas
-    await abrirModalTarefas(page);
-    await delay(3000);
+    const paginaPrincipal = page;
     
-    // Clicar em "Browse surprise items"
-    const clicked = await clicarTarefaEspecifica(page, 'Browse surprise items');
-    if (!clicked) {
-      // Tenta em português
-      await clicarTarefaEspecifica(page, 'Navegar por itens surpresa');
+    for (let execucao = 1; execucao <= 2; execucao++) {
+      console.log(`\n🔁 Execução ${execucao}/2 da tarefa especial...`);
+      
+      // 🔥 ABRIR MODAL NA ABA PRINCIPAL
+      console.log('1. 📱 Abrindo modal de tarefas...');
+      const modalAberto = await abrirModalTarefas(paginaPrincipal);
+      if (!modalAberto) {
+        console.log('❌ Não conseguiu abrir modal');
+        continue;
+      }
+      await delay(3000);
+      await takeScreenshot(paginaPrincipal, `modal-aberto-especial-${execucao}`);
+      
+      // 🔥 CLICAR EM "BROWSE SURPRISE ITEMS" NA ABA PRINCIPAL
+      console.log('2. 🔍 Clicando em "Browse surprise items"...');
+      const tarefaEncontrada = await clicarTarefaEspecifica(paginaPrincipal, 'Browse surprise items');
+      
+      if (!tarefaEncontrada) {
+        console.log('❌ Tarefa "Browse surprise items" não encontrada');
+        continue;
+      }
+      
+      console.log('3. 🚀 Aguardando nova aba abrir...');
+      await delay(6000);
+      await takeScreenshot(paginaPrincipal, 'antes-nova-aba');
+      
+      // 🔥 MUDA PARA A NOVA ABA
+      const browser = paginaPrincipal.browser();
+      const pages = await browser.pages();
+      
+      if (pages.length <= 1) {
+        console.log('❌ Nenhuma nova aba foi aberta');
+        continue;
+      }
+      
+      const novaAba = pages[pages.length - 1];
+      console.log('   ✅ Mudando para nova aba de produtos...');
+      await novaAba.bringToFront();
+      
+      // 🔥 AGORA TRABALHA NA NOVA ABA
+      await delay(4000);
+      await takeScreenshot(novaAba, `nova-aba-produtos-${execucao}`);
+      
+      // 🔥 VERIFICA SE ESTÁ NA PÁGINA CORRETA
+      const estaNaPaginaProdutos = await novaAba.evaluate(() => {
+        return document.querySelector('.product-click') !== null;
+      });
+      
+      if (!estaNaPaginaProdutos) {
+        console.log('❌ Não está na página de produtos');
+        await takeScreenshot(novaAba, 'nao-e-pagina-produtos');
+        await novaAba.close();
+        await paginaPrincipal.bringToFront();
+        continue;
+      }
+      
+      console.log('4. 🎯 Clicando em 3 produtos...');
+      
+      const produtosClicados = new Set();
+      
+      for (let i = 1; i <= 3; i++) {
+        console.log(`   📦 Procurando produto ${i}/3...`);
+        
+        let produtoEncontrado = false;
+        
+        // 🔥 CLICA NO PRODUTO NA NOVA ABA
+        const resultado = await novaAba.evaluate((clicados, indice) => {
+          try {
+            const productClicks = Array.from(document.querySelectorAll('.product-click'));
+            console.log(`🔍 Encontrados ${productClicks.length} elementos .product-click`);
+            
+            // Filtra produtos visíveis
+            const clicksVisiveis = productClicks.filter(el => {
+              const rect = el.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            });
+            
+            // Seleciona produto por índice (evita repetição)
+            if (clicksVisiveis.length > indice - 1) {
+              const produto = clicksVisiveis[indice - 1];
+              produto.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              produto.click();
+              return { success: true };
+            }
+            
+            return { success: false };
+          } catch (e) {
+            return { success: false, error: e.message };
+          }
+        }, Array.from(produtosClicados), i);
+        
+        if (resultado.success) {
+          produtoEncontrado = true;
+          produtosClicados.add(i);
+          console.log(`   ✅ Produto ${i}/3 clicado!`);
+          
+          // 🔥 AGUARDA NA NOVA ABA
+          console.log('   ⏳ Aguardando 8s...');
+          await delay(8000);
+          await takeScreenshot(novaAba, `produto-${i}-detalhes-${execucao}`);
+          
+          // 🔥 VOLTA PARA LISTA USANDO BOTÃO NATIVO NA NOVA ABA
+          console.log('   ↩️ Voltando com botão nativo...');
+          const voltou = await novaAba.evaluate(() => {
+            try {
+              const backBtn = document.querySelector('.ae_back_btn, .e2e_back_button, [class*="back"]');
+              if (backBtn && backBtn.offsetWidth > 0) {
+                backBtn.click();
+                return true;
+              }
+              return false;
+            } catch (e) {
+              return false;
+            }
+          });
+          
+          if (!voltou) {
+            console.log('   ⚠️ Usando goBack...');
+            await novaAba.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 });
+          }
+          
+          await delay(4000);
+          await takeScreenshot(novaAba, `volta-lista-${i}-${execucao}`);
+          
+          // 🔥 FAZ SCROLL NA NOVA ABA
+          if (i < 3) {
+            await novaAba.evaluate(() => {
+              window.scrollBy(0, 400);
+            });
+            await delay(2000);
+          }
+          
+        } else {
+          console.log(`   ❌ Produto ${i} não encontrado`);
+          break;
+        }
+      }
+      
+      console.log(`🎉 Execução ${execucao}/2 concluída! ${produtosClicados.size} produtos clicados.`);
+      
+      // 🔥 FECHA A NOVA ABA E VOLTA PARA PRINCIPAL
+      console.log('   🗑️ Fechando aba de produtos...');
+      await novaAba.close();
+      await paginaPrincipal.bringToFront();
+      await delay(3000);
+      await takeScreenshot(paginaPrincipal, `apos-fechar-aba-${execucao}`);
+      
+      if (execucao < 2) {
+        console.log('🔄 Pronto para próxima execução...');
+        await delay(3000);
+      }
     }
     
-    await delay(3000);
+    console.log('🎉 EXECUÇÃO ESPECIAL "BROWSE SURPRISE ITEMS" CONCLUÍDA!');
     
-    // Executar a tarefa
-    await executarBrowseSurpriseItems(page, urlMoedas);
-    
-    console.log('✅ EXECUÇÃO FINAL CONCLUÍDA!');
   } catch (error) {
-    console.log('❌ Erro na execução final:', error.message);
+    console.log('💥 Erro na execução especial:', error.message);
+    await takeScreenshot(page, 'erro-execucao-especial');
+    
+    // Limpeza
+    try {
+      const browser = page.browser();
+      const pages = await browser.pages();
+      // Fecha todas as abas exceto a principal
+      for (let i = pages.length - 1; i > 0; i--) {
+        await pages[i].close();
+      }
+      await pages[0].bringToFront();
+    } catch (e) {}
   }
 }
 
-// 🔥 EXECUTAR BOT
-botEventosReais().catch(console.error);
+// Executar o bot
+if (require.main === module) {
+  botEventosReais().catch(console.error);
+}
+
+module.exports = { botEventosReais };
