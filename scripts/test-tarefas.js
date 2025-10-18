@@ -1,6 +1,7 @@
-// bot-ali-inteligente.js
+// bot-ali-gh-actions.js
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const UserAgent = require('user-agents');
 const fs = require('fs');
 const path = require('path');
 
@@ -57,12 +58,8 @@ console.log('   Email:', ALIEXPRESS_EMAIL ? '*** Configurado ***' : 'Não config
 console.log('   Senha:', ALIEXPRESS_PASSWORD ? '*** Configurada ***' : 'Não configurada');
 
 async function botEventosReais() {
-  // 🔥 USER AGENT SIMPLES
-  const userAgent = {
-    toString: () => 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-  };
-  console.log('📱 User Agent móvel configurado');
-
+  const userAgent = new UserAgent({ deviceCategory: 'mobile' });
+  
   const browser = await puppeteer.launch({
     headless: isCI ? "new" : false,
     executablePath: isCI ? '/usr/bin/google-chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -87,7 +84,7 @@ async function botEventosReais() {
   });
 
   const page = await browser.newPage();
-
+  
   // 🔥 URL DA PÁGINA DE MOEDAS
   const URL_MOEDAS = 'https://m.aliexpress.com/p/coin-index/index.html?utm=botdoafiliado&_immersiveMode=true&from=syicon&t=botmoedas&tt=CPS_NORMAL&_mobile=1&_is_mobile=1';
 
@@ -127,6 +124,7 @@ async function botEventosReais() {
     });
 
     console.log('📱 Ambiente configurado!');
+    await takeScreenshot(page, 'ambiente-configurado');
 
     // === LOGIN ===
     console.log('1. 🔐 Navegando para login...');
@@ -210,7 +208,7 @@ async function botEventosReais() {
     await takeScreenshot(page, 'apos-coletar-moedas');
     
     // 🔥 TEMPO LIMITE DE 2.5 MINUTOS (150 segundos)
-    const tempoLimite = 0.3 * 60 * 1000; // 2.5 minutos em milissegundos
+    const tempoLimite = 2.0 * 60 * 1000; // 2.5 minutos em milissegundos
     const inicio = Date.now();
     
     // 🔥 EXECUTAR LOOP POR ATÉ 4 MINUTOS
@@ -231,7 +229,7 @@ async function botEventosReais() {
       
       await takeScreenshot(page, 'modal-aberto');
       
-      // 🔥 OBTER TAREFAS DISPONÍVEIS (EXCLUINDO JOGOS) - ATUALIZADO PARA INGLÊS
+      // 🔥 OBTER TAREFAS DISPONÍVEIS (EXCLUINDO JOGOS)
       let tarefasDisponiveis = [];
       try {
         tarefasDisponiveis = await obterTarefasDisponiveis(page);
@@ -253,13 +251,11 @@ async function botEventosReais() {
       const tarefasFiltradas = tarefasDisponiveis.filter(tarefa => {
         if (!tarefa || !tarefa.nome) return false;
         
-        // 🔥 EXCLUIR TAREFAS DE JOGO
-        if (tarefa.nome.includes('Tente sua sorte') || 
-            tarefa.nome.includes('Try your luck') ||
+        // 🔥 EXCLUIR TAREFAS DE JOGO (INGLÊS)
+        if (tarefa.nome.includes('Try your luck') || 
             tarefa.nome.includes('Merge Boss') ||
             tarefa.nome.includes('game') ||
-            tarefa.nome.includes('jogo') ||
-            tarefa.nome.includes('Prize Land')) {
+            tarefa.nome.includes('Jackpot')) {
           console.log(`🚫 Ignorando tarefa de jogo: ${tarefa.nome}`);
           return false;
         }
@@ -373,62 +369,40 @@ async function botEventosReais() {
   }
 }
 
-// 🔥 OBTER TAREFAS DISPONÍVEIS (ATUALIZADO PARA INGLÊS)
+// 🔥 OBTER TAREFAS DISPONÍVEIS (ATUALIZADO PARA HTML INGLÊS)
 async function obterTarefasDisponiveis(page) {
   try {
     const tarefas = await page.evaluate(() => {
       try {
         const resultados = [];
         
-        // 🔥 ESTRATÉGIA MAIS AMPLA - PROCURA POR TODOS OS BOTÕES "Go"
-        const todosBotoes = Array.from(document.querySelectorAll('button'));
-        const botoesGo = todosBotoes.filter(btn => {
-          const texto = btn.textContent?.trim() || '';
-          return texto === 'Go' && 
-                 btn.offsetWidth > 0 && 
-                 btn.offsetHeight > 0 &&
-                 btn.disabled !== true;
-        });
+        // 🔥 BUSCA POR TODOS OS ELEMENTOS DE TAREFA COM A CLASSE CORRETA
+        const tarefasElementos = document.querySelectorAll('.e2e_normal_task');
         
-        console.log(`🔍 Encontrados ${botoesGo.length} botões "Go"`);
-        
-        for (let btn of botoesGo) {
+        for (let tarefa of tarefasElementos) {
           try {
-            // 🔥 PROCURA O TEXTO DA TAREFA PRÓXIMO AO BOTÃO
-            const container = btn.closest('div, li, section, [class*="task"], [class*="item"]');
-            if (container) {
-              // Procura por texto que descreve a tarefa (texto mais longo)
-              const textos = Array.from(container.querySelectorAll('span, div, p, h3, h4')).filter(el => {
-                const texto = el.textContent?.trim() || '';
-                return texto.length > 10 && 
-                       !texto.includes('Go') && 
-                       !texto.includes('+') &&
-                       !texto.includes('coins') &&
-                       !texto.includes('Coins');
-              });
+            const tituloElement = tarefa.querySelector('.e2e_normal_task_content_title');
+            const botaoElement = tarefa.querySelector('.e2e_normal_task_right_btn');
+            
+            if (tituloElement && botaoElement) {
+              const nome = tituloElement.textContent.trim();
+              const botaoVisivel = botaoElement.offsetWidth > 0 && botaoElement.offsetHeight > 0;
+              const botaoHabilitado = botaoElement.style.display !== 'none';
               
-              if (textos.length > 0) {
-                const nomeTarefa = textos[0].textContent.trim();
-                console.log(`📝 Tarefa encontrada: "${nomeTarefa}"`);
-                
+              const textoBotao = botaoElement.textContent.trim();
+              const botaoDisponivel = textoBotao === 'GO' || textoBotao === 'Go';
+              
+              if (botaoVisivel && botaoHabilitado && botaoDisponivel) {
                 resultados.push({
-                  nome: nomeTarefa,
+                  nome: nome,
                   elemento: 'botao_go'
                 });
               }
             }
           } catch (e) {
-            console.log('Erro ao processar botão Go:', e);
+            console.log('Erro ao processar tarefa individual:', e);
           }
         }
-        
-        // 🔥 DEBUG: MOSTRAR TODOS OS TEXTOS ENCONTRADOS NA PÁGINA
-        console.log('=== DEBUG: TODOS OS TEXTOS DA PÁGINA ===');
-        const todosTextos = Array.from(document.querySelectorAll('span, div, p, h3, h4, button'))
-          .map(el => el.textContent?.trim())
-          .filter(texto => texto && texto.length > 5);
-        
-        console.log('Textos encontrados:', todosTextos.slice(0, 20)); // Mostra os primeiros 20
         
         return resultados;
       } catch (e) {
@@ -437,67 +411,13 @@ async function obterTarefasDisponiveis(page) {
       }
     });
     
-    console.log(`✅ Total de tarefas encontradas: ${tarefas.length}`);
-    console.log(`📋 Lista de tarefas:`, tarefas.map(t => t.nome));
+    console.log(`✅ Tarefas encontradas: ${tarefas.length}`);
+    tarefas.forEach(t => console.log(`   - ${t.nome}`));
+    
     return tarefas || [];
   } catch (error) {
     console.log('❌ Erro ao obter tarefas:', error.message);
     return [];
-  }
-}
-
-// 🔥 CLICAR TAREFA ESPECÍFICA (ATUALIZADO PARA INGLÊS)
-async function clicarTarefaEspecifica(page, nomeTarefa) {
-  try {
-    console.log(`   🔍 DEBUG: Procurando tarefa: "${nomeTarefa}"`);
-    
-    const sucesso = await page.evaluate((nome) => {
-      try {
-        // 🔥 ESTRATÉGIA: PROCURA POR BOTÕES "Go" E VERIFICA O TEXTO DA TAREFA PRÓXIMO
-        const todosBotoes = Array.from(document.querySelectorAll('button'));
-        const botoesGo = todosBotoes.filter(btn => {
-          const texto = btn.textContent?.trim() || '';
-          return texto === 'Go' && btn.offsetWidth > 0;
-        });
-        
-        console.log(`🔍 DEBUG: ${botoesGo.length} botões "Go" encontrados`);
-        
-        for (let btn of botoesGo) {
-          const container = btn.closest('div, li, section, [class*="task"], [class*="item"]');
-          if (container) {
-            const textos = Array.from(container.querySelectorAll('span, div, p, h3, h4')).filter(el => {
-              const texto = el.textContent?.trim() || '';
-              return texto.length > 10 && 
-                     !texto.includes('Go') && 
-                     !texto.includes('+') &&
-                     !texto.includes('coins');
-            });
-            
-            if (textos.length > 0) {
-              const textoEncontrado = textos[0].textContent.trim();
-              console.log(`🔍 DEBUG: Comparando "${textoEncontrado}" com "${nome}"`);
-              
-              if (textoEncontrado === nome) {
-                console.log(`✅ DEBUG: ENCONTROU! Clicando em: ${nome}`);
-                btn.click();
-                return true;
-              }
-            }
-          }
-        }
-        
-        console.log(`❌ DEBUG: NÃO ENCONTROU a tarefa: ${nome}`);
-        return false;
-      } catch (e) {
-        console.log('❌ DEBUG: Erro ao clicar:', e);
-        return false;
-      }
-    }, nomeTarefa);
-
-    return sucesso;
-  } catch (error) {
-    console.log(`   ❌ Erro ao clicar:`, error.message);
-    return false;
   }
 }
 
@@ -527,22 +447,27 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
       // 🔥 IDENTIFICAR TIPO DE TAREFA PELO NOME (INGLÊS)
       if (tarefa.nome.includes('Browse surprise items')) {
         await executarBrowseSurpriseItems(page, urlMoedas);
-      } else if (tarefa.nome.includes('Find what you like')) {
+      } else if (tarefa.nome.includes('Search for what you love')) {
         await executarPesquisa(page, urlMoedas);
       } else if (tarefa.nome.includes('View Super discounts') || 
                  tarefa.nome.includes('Explore sponsored items') ||
-                 tarefa.nome.includes('Discount hunt') ||
-                 tarefa.nome.includes('Coupons and credits')) {
+                 tarefa.nome.includes('Discount finder') ||
+                 tarefa.nome.includes('Coupons & shopping credits')) {
         // Tarefas com espera de 19 segundos
         console.log('   ⏳ Aguardando 19s...');
         await delay(19000);
         await takeScreenshot(page, `antes-voltar-${tarefa.nome.substring(0, 10).replace(/[^a-zA-Z0-9]/g, '')}`);
         await voltarParaMoedas(page, urlMoedas);
-      } else if (tarefa.nome.includes('Coins Savings Recap')) {
+      } else if (tarefa.nome.includes('View your "Coins Savings Recap"')) {
         // Tarefa extrato de moedas (15 segundos)
         console.log('   ⏳ Aguardando 15s...');
         await delay(15000);
         await takeScreenshot(page, `antes-voltar-${tarefa.nome.substring(0, 10).replace(/[^a-zA-Z0-9]/g, '')}`);
+        await voltarParaMoedas(page, urlMoedas);
+      } else if (tarefa.nome.includes('Daily check-in')) {
+        // Check-in diário - instantâneo
+        console.log('   ✅ Check-in realizado');
+        await delay(3000);
         await voltarParaMoedas(page, urlMoedas);
       } else {
         // Tarefa genérica (15 segundos)
@@ -566,7 +491,7 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   }
 }
 
-// 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - ATUALIZADO PARA INGLÊS
+// 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - INGLÊS
 async function executarBrowseSurpriseItems(page, urlMoedas) {
   console.log('   🎁 Executando browse surprise items (3 produtos)...');
   
@@ -638,7 +563,7 @@ async function executarBrowseSurpriseItems(page, urlMoedas) {
   await voltarParaMoedas(page, urlMoedas);
 }
 
-// 🔥 EXECUTAR PESQUISA - ATUALIZADO PARA INGLÊS
+// 🔥 EXECUTAR PESQUISA - INGLÊS
 async function executarPesquisa(page, urlMoedas) {
   console.log('   🔍 Executando pesquisa...');
   await delay(5000);
@@ -650,7 +575,7 @@ async function executarPesquisa(page, urlMoedas) {
       for (let campo of campos) {
         if (campo.offsetWidth > 0) {
           campo.focus();
-          campo.value = 'pendrive';
+          campo.value = 'phone';
           campo.dispatchEvent(new Event('input', { bubbles: true }));
           return true;
         }
@@ -662,7 +587,7 @@ async function executarPesquisa(page, urlMoedas) {
   });
 
   if (digitou) {
-    console.log('   ⌨️ Digitou "pendrive"');
+    console.log('   ⌨️ Digitou "phone"');
     await takeScreenshot(page, 'digitou-pesquisa');
     await delay(2000);
     await page.keyboard.press('Enter');
@@ -707,7 +632,37 @@ async function voltarParaMoedas(page, urlMoedas) {
   }
 }
 
-// 🔥 COLETAR MOEDAS DIÁRIAS
+// 🔥 CLICAR TAREFA ESPECÍFICA (ATUALIZADO PARA HTML INGLÊS)
+async function clicarTarefaEspecifica(page, nomeTarefa) {
+  try {
+    const sucesso = await page.evaluate((nome) => {
+      try {
+        const tarefas = document.querySelectorAll('.e2e_normal_task');
+        
+        for (let tarefa of tarefas) {
+          const titulo = tarefa.querySelector('.e2e_normal_task_content_title');
+          if (titulo && titulo.textContent.trim() === nome) {
+            const botaoGo = tarefa.querySelector('.e2e_normal_task_right_btn');
+            if (botaoGo && botaoGo.offsetWidth > 0) {
+              botaoGo.click();
+              return true;
+            }
+          }
+        }
+        return false;
+      } catch (e) {
+        return false;
+      }
+    }, nomeTarefa);
+
+    return sucesso;
+  } catch (error) {
+    console.log(`   ❌ Erro ao clicar:`, error.message);
+    return false;
+  }
+}
+
+// 🔥 COLETAR MOEDAS DIÁRIAS (INGLÊS)
 async function coletarMoedasDiarias(page) {
   try {
     console.log('💰 Verificando moedas para coletar...');
@@ -717,7 +672,7 @@ async function coletarMoedasDiarias(page) {
       
       for (let btn of botoes) {
         const texto = btn.textContent?.toLowerCase() || '';
-        if (texto.includes('coletar') || texto.includes('collect')) {
+        if (texto.includes('collect')) {
           btn.click();
           return true;
         }
@@ -734,26 +689,37 @@ async function coletarMoedasDiarias(page) {
   }
 }
 
-// 🔥 ABRIR MODAL DE TAREFAS
+// 🔥 ABRIR MODAL DE TAREFAS (CORRIGIDA - IGUAL AO CÓDIGO EM PORTUGUÊS)
 async function abrirModalTarefas(page) {
   try {
+    // 🔥 PRIMEIRO VERIFICA SE O MODAL JÁ ESTÁ ABERTO
     const modalAberto = await verificarModalAberto(page);
     if (modalAberto) {
+      console.log('✅ Modal já está aberto');
       return true;
     }
     
+    // 🔥 TENTA CLICAR NO BOTÃO PELO ID (MESMA LÓGICA DO CÓDIGO EM PORTUGUÊS)
+    console.log('📋 Clicando no botão para abrir modal...');
     await page.click('#signButton');
     await delay(5000);
     
+    // 🔥 VERIFICA SE O MODAL ABRIU APÓS O CLIQUE
     const abriu = await verificarModalAberto(page);
-    return abriu;
+    if (abriu) {
+      console.log('✅ Modal aberto com sucesso!');
+      return true;
+    } else {
+      console.log('❌ Modal não abriu após clique');
+      return false;
+    }
   } catch (error) {
     console.log('❌ Erro ao abrir modal:', error.message);
     return false;
   }
 }
 
-// 🔥 FUNÇÕES AUXILIARES
+// 🔥 VERIFICAR SE MODAL ESTÁ ABERTO
 async function verificarModalAberto(page) {
   try {
     return await page.evaluate(() => {
@@ -769,6 +735,7 @@ async function verificarModalAberto(page) {
   }
 }
 
+// 🔥 REMOVER POPUP SALVAR SENHA (AGRESSIVO)
 async function removerPopupSalvarSenhaAgressivo(page) {
   try {
     const popupFechado = await page.evaluate(() => {
@@ -838,7 +805,7 @@ async function removerPopupSalvarSenhaAgressivo(page) {
   }
 }
 
-// 🔥 FUNÇÃO EXCLUSIVA PARA BROWSE SURPRISE ITEMS - AJUSTE FINAL - ATUALIZADO PARA INGLÊS
+// 🔥 FUNÇÃO EXCLUSIVA PARA BROWSE SURPRISE ITEMS - CORRIGIDA
 async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
   console.log('\n🎯 INICIANDO EXECUÇÃO ESPECIAL PARA "BROWSE SURPRISE ITEMS"');
   
@@ -985,12 +952,22 @@ async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
       
       console.log(`🎉 Execução ${execucao}/2 concluída! ${produtosClicados.size} produtos clicados.`);
       
-      // 🔥 FECHA A NOVA ABA E VOLTA PARA PRINCIPAL
-      console.log('   🗑️ Fechando aba de produtos...');
+      // 🔥 FECHA APENAS A NOVA ABA E VOLTA PARA PRINCIPAL
+      console.log('   🗑️ Fechando apenas a aba de produtos...');
       await novaAba.close();
-      await paginaPrincipal.bringToFront();
-      await delay(3000);
-      await takeScreenshot(paginaPrincipal, `apos-fechar-aba-${execucao}`);
+      
+      // 🔥 VERIFICA SE A PÁGINA PRINCIPAL AINDA EXISTE ANTES DE TENTAR VOLTAR
+      const pagesAposFechar = await browser.pages();
+      if (pagesAposFechar.length > 0) {
+        await pagesAposFechar[0].bringToFront();
+        await delay(3000);
+        await takeScreenshot(paginaPrincipal, `apos-fechar-aba-${execucao}`);
+      } else {
+        console.log('❌ Página principal foi fechada, recriando...');
+        await page.goto(urlMoedas, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await delay(3000);
+        await takeScreenshot(page, 'pagina-recarregada');
+      }
       
       if (execucao < 2) {
         console.log('🔄 Pronto para próxima execução...');
@@ -1004,16 +981,21 @@ async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
     console.log('💥 Erro na execução especial:', error.message);
     await takeScreenshot(page, 'erro-execucao-especial');
     
-    // Limpeza
+    // Limpeza mais segura
     try {
       const browser = page.browser();
       const pages = await browser.pages();
-      // Fecha todas as abas exceto a principal
-      for (let i = pages.length - 1; i > 0; i--) {
-        await pages[i].close();
+      
+      // Se ainda houver páginas abertas, traz a primeira para frente
+      if (pages.length > 0) {
+        await pages[0].bringToFront();
+      } else {
+        // Se não houver páginas, recria
+        await page.goto(urlMoedas, { waitUntil: 'domcontentloaded', timeout: 15000 });
       }
-      await pages[0].bringToFront();
-    } catch (e) {}
+    } catch (e) {
+      console.log('Erro na limpeza:', e.message);
+    }
   }
 }
 
