@@ -43,3 +43,21 @@ jobs:
         echo "✅ Execução do bot finalizada!"
         echo "📸 Screenshots disponíveis para download acima"
         echo "🔄 Próxima execução: 7:00 AM UTC"
+        
+
+    - name: 💾 Salvar cookies atualizados
+      if: always()
+      run: |
+        if [ -f cookies_atualizados.json ]; then
+          echo "✅ cookies_atualizados.json encontrado!"
+        else
+          echo "⚠️ Nenhum cookies_atualizados.json encontrado."
+        fi
+
+    - name: 🔄 Atualizar secret com cookies novos
+      if: always()
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      run: node scripts/update-secret.js
+
