@@ -207,7 +207,7 @@ async function botEventosReais() {
     await takeScreenshot(page, 'after-collecting-coins');
     
     // 🔥 TEMPO LIMITE DE 3 MINUTOS (180 segundos)
-    const tempoLimite = 3 * 60 * 1000;
+    const tempoLimite = 0.3 * 60 * 1000;
     const inicio = Date.now();
     
     // 🔥 EXECUTAR LOOP POR ATÉ 3 MINUTOS
