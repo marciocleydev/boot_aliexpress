@@ -94,7 +94,7 @@ async function botEventosReais() {
   // 🔥 SISTEMA INTELIGENTE - SÓ MARCA COMO CONCLUÍDA QUANDO REALMENTE TERMINOU
   const tarefasConcluidas = new Set();
   const contadorTarefas = new Map(); // Conta quantas vezes cada tarefa foi executada
-  const tarefasMultiplas = new Set(['Veja os super descontos', 'Descubra itens patrocinados']); // Tarefas que precisam de múltiplas execuções
+  const tarefasMultiplas = new Set(['View Super discounts', 'Explore sponsored items']); // Tarefas que precisam de múltiplas execuções
 
   try {
     // 🔥 INTERCEPTA ABERTURA DE NOVAS ABAS
@@ -305,8 +305,8 @@ async function botEventosReais() {
           tarefasExecutadas++;
           
           // 🔥 SISTEMA INTELIGENTE - SÓ MARCA COMO CONCLUÍDA QUANDO REALMENTE TERMINOU
-          if (tarefa.nome.includes('Explore itens surpresa') || tarefa.nome.includes('Browse surprise items')) {
-            // "Explore itens surpresa" precisa de 2 execuções
+          if (tarefa.nome.includes('Browse surprise items')) {
+            // "Browse surprise items" precisa de 2 execuções
             if (execucoes + 1 >= 2) {
               console.log(`🎉 ${tarefa.nome} - 2 EXECUÇÕES COMPLETAS! Marcando como CONCLUÍDA`);
               tarefasConcluidas.add(tarefa.nome);
@@ -341,8 +341,8 @@ async function botEventosReais() {
     console.log('   - Tarefas completamente concluídas:', Array.from(tarefasConcluidas));
     console.log('   - Contador de execuções por tarefa:', Object.fromEntries(contadorTarefas));
 
-    // 🔥 EXECUÇÃO ESPECIAL PARA "EXPLORE ITENS SURPRESA"
-    await executarExploreItensSurpresaFinal(page, URL_MOEDAS);
+    // 🔥 EXECUÇÃO ESPECIAL PARA "BROWSE SURPRISE ITEMS"
+    await executarBrowseSurpriseItemsFinal(page, URL_MOEDAS);
 
     console.log('\n🏁 TODAS AS TAREFAS FINALIZADAS!');
     await takeScreenshot(page, 'finalizacao');
@@ -422,6 +422,14 @@ async function obterTarefasDisponiveis(page) {
           }
         }
         
+        // 🔥 DEBUG: MOSTRAR TODOS OS TEXTOS ENCONTRADOS NA PÁGINA
+        console.log('=== DEBUG: TODOS OS TEXTOS DA PÁGINA ===');
+        const todosTextos = Array.from(document.querySelectorAll('span, div, p, h3, h4, button'))
+          .map(el => el.textContent?.trim())
+          .filter(texto => texto && texto.length > 5);
+        
+        console.log('Textos encontrados:', todosTextos.slice(0, 20)); // Mostra os primeiros 20
+        
         return resultados;
       } catch (e) {
         console.log('Erro no evaluate:', e);
@@ -430,6 +438,7 @@ async function obterTarefasDisponiveis(page) {
     });
     
     console.log(`✅ Total de tarefas encontradas: ${tarefas.length}`);
+    console.log(`📋 Lista de tarefas:`, tarefas.map(t => t.nome));
     return tarefas || [];
   } catch (error) {
     console.log('❌ Erro ao obter tarefas:', error.message);
@@ -440,6 +449,8 @@ async function obterTarefasDisponiveis(page) {
 // 🔥 CLICAR TAREFA ESPECÍFICA (ATUALIZADO PARA INGLÊS)
 async function clicarTarefaEspecifica(page, nomeTarefa) {
   try {
+    console.log(`   🔍 DEBUG: Procurando tarefa: "${nomeTarefa}"`);
+    
     const sucesso = await page.evaluate((nome) => {
       try {
         // 🔥 ESTRATÉGIA: PROCURA POR BOTÕES "Go" E VERIFICA O TEXTO DA TAREFA PRÓXIMO
@@ -448,6 +459,8 @@ async function clicarTarefaEspecifica(page, nomeTarefa) {
           const texto = btn.textContent?.trim() || '';
           return texto === 'Go' && btn.offsetWidth > 0;
         });
+        
+        console.log(`🔍 DEBUG: ${botoesGo.length} botões "Go" encontrados`);
         
         for (let btn of botoesGo) {
           const container = btn.closest('div, li, section, [class*="task"], [class*="item"]');
@@ -460,14 +473,23 @@ async function clicarTarefaEspecifica(page, nomeTarefa) {
                      !texto.includes('coins');
             });
             
-            if (textos.length > 0 && textos[0].textContent.trim() === nome) {
-              btn.click();
-              return true;
+            if (textos.length > 0) {
+              const textoEncontrado = textos[0].textContent.trim();
+              console.log(`🔍 DEBUG: Comparando "${textoEncontrado}" com "${nome}"`);
+              
+              if (textoEncontrado === nome) {
+                console.log(`✅ DEBUG: ENCONTROU! Clicando em: ${nome}`);
+                btn.click();
+                return true;
+              }
             }
           }
         }
+        
+        console.log(`❌ DEBUG: NÃO ENCONTROU a tarefa: ${nome}`);
         return false;
       } catch (e) {
+        console.log('❌ DEBUG: Erro ao clicar:', e);
         return false;
       }
     }, nomeTarefa);
@@ -479,7 +501,7 @@ async function clicarTarefaEspecifica(page, nomeTarefa) {
   }
 }
 
-// 🔥 EXECUTAR TAREFA ESPECÍFICA (MANTIDO ORIGINAL)
+// 🔥 EXECUTAR TAREFA ESPECÍFICA (ATUALIZADO PARA INGLÊS)
 async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   try {
     // 🔥 CLICAR NA TAREFA ESPECÍFICA
@@ -502,23 +524,21 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
       console.log(`   📱 Navegou para tarefa`);
       await takeScreenshot(page, `pagina-tarefa-${tarefa.nome.substring(0, 10).replace(/[^a-zA-Z0-9]/g, '')}`);
       
-      // 🔥 IDENTIFICAR TIPO DE TAREFA PELO NOME
-      if (tarefa.nome.includes('Explore itens surpresa') || tarefa.nome.includes('Browse surprise items')) {
-        await executarExploreItensSurpresa(page, urlMoedas);
-      } else if (tarefa.nome.includes('Procure o que você gosta')) {
+      // 🔥 IDENTIFICAR TIPO DE TAREFA PELO NOME (INGLÊS)
+      if (tarefa.nome.includes('Browse surprise items')) {
+        await executarBrowseSurpriseItems(page, urlMoedas);
+      } else if (tarefa.nome.includes('Find what you like')) {
         await executarPesquisa(page, urlMoedas);
-      } else if (tarefa.nome.includes('Veja os super descontos') || 
-                 tarefa.nome.includes('Descubra itens patrocinados') ||
-                 tarefa.nome.includes('Caça-descontos') ||
-                 tarefa.nome.includes('Cupons e créditos') ||
-                 tarefa.nome.includes('View Super discounts') ||
-                 tarefa.nome.includes('Explore sponsored items')) {
+      } else if (tarefa.nome.includes('View Super discounts') || 
+                 tarefa.nome.includes('Explore sponsored items') ||
+                 tarefa.nome.includes('Discount hunt') ||
+                 tarefa.nome.includes('Coupons and credits')) {
         // Tarefas com espera de 19 segundos
         console.log('   ⏳ Aguardando 19s...');
         await delay(19000);
         await takeScreenshot(page, `antes-voltar-${tarefa.nome.substring(0, 10).replace(/[^a-zA-Z0-9]/g, '')}`);
         await voltarParaMoedas(page, urlMoedas);
-      } else if (tarefa.nome.includes('Veja seu "Extrato de Moedas"') || tarefa.nome.includes('Coins Savings Recap')) {
+      } else if (tarefa.nome.includes('Coins Savings Recap')) {
         // Tarefa extrato de moedas (15 segundos)
         console.log('   ⏳ Aguardando 15s...');
         await delay(15000);
@@ -546,14 +566,14 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   }
 }
 
-// 🔥 EXECUTAR EXPLORE ITENS SURPRESA (MELHORADO) - MANTIDO ORIGINAL
-async function executarExploreItensSurpresa(page, urlMoedas) {
-  console.log('   🎁 Executando itens surpresa (3 produtos)...');
+// 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - ATUALIZADO PARA INGLÊS
+async function executarBrowseSurpriseItems(page, urlMoedas) {
+  console.log('   🎁 Executando browse surprise items (3 produtos)...');
   
   // 🔥 AGUARDAR PÁGINA CARREGAR COMPLETAMENTE
   console.log('   ⏳ Aguardando carregamento da página...');
   await delay(6000);
-  await takeScreenshot(page, 'explore-itens-carregado');
+  await takeScreenshot(page, 'browse-items-carregado');
   
   // 🔥 CLICA EM 3 PRODUTOS DIFERENTES
   for (let i = 1; i <= 3; i++) {
@@ -618,7 +638,7 @@ async function executarExploreItensSurpresa(page, urlMoedas) {
   await voltarParaMoedas(page, urlMoedas);
 }
 
-// 🔥 EXECUTAR PESQUISA - MANTIDO ORIGINAL
+// 🔥 EXECUTAR PESQUISA - ATUALIZADO PARA INGLÊS
 async function executarPesquisa(page, urlMoedas) {
   console.log('   🔍 Executando pesquisa...');
   await delay(5000);
@@ -654,7 +674,7 @@ async function executarPesquisa(page, urlMoedas) {
   await voltarParaMoedas(page, urlMoedas);
 }
 
-// 🔥 VOLTAR PARA PÁGINA DE MOEDAS - MANTIDO ORIGINAL
+// 🔥 VOLTAR PARA PÁGINA DE MOEDAS
 async function voltarParaMoedas(page, urlMoedas) {
   try {
     console.log('   ↩️ Voltando para moedas...');
@@ -687,7 +707,7 @@ async function voltarParaMoedas(page, urlMoedas) {
   }
 }
 
-// 🔥 COLETAR MOEDAS DIÁRIAS - MANTIDO ORIGINAL
+// 🔥 COLETAR MOEDAS DIÁRIAS
 async function coletarMoedasDiarias(page) {
   try {
     console.log('💰 Verificando moedas para coletar...');
@@ -714,7 +734,7 @@ async function coletarMoedasDiarias(page) {
   }
 }
 
-// 🔥 ABRIR MODAL DE TAREFAS - MANTIDO ORIGINAL
+// 🔥 ABRIR MODAL DE TAREFAS
 async function abrirModalTarefas(page) {
   try {
     const modalAberto = await verificarModalAberto(page);
@@ -733,7 +753,7 @@ async function abrirModalTarefas(page) {
   }
 }
 
-// 🔥 FUNÇÕES AUXILIARES - MANTIDO ORIGINAL
+// 🔥 FUNÇÕES AUXILIARES
 async function verificarModalAberto(page) {
   try {
     return await page.evaluate(() => {
@@ -818,9 +838,9 @@ async function removerPopupSalvarSenhaAgressivo(page) {
   }
 }
 
-// 🔥 FUNÇÃO EXCLUSIVA PARA EXPLORE ITENS SURPRESA - AJUSTE FINAL - MANTIDO ORIGINAL
-async function executarExploreItensSurpresaFinal(page, urlMoedas) {
-  console.log('\n🎯 INICIANDO EXECUÇÃO ESPECIAL PARA "EXPLORE ITENS SURPRESA"');
+// 🔥 FUNÇÃO EXCLUSIVA PARA BROWSE SURPRISE ITEMS - AJUSTE FINAL - ATUALIZADO PARA INGLÊS
+async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
+  console.log('\n🎯 INICIANDO EXECUÇÃO ESPECIAL PARA "BROWSE SURPRISE ITEMS"');
   
   try {
     const paginaPrincipal = page;
@@ -838,12 +858,12 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
       await delay(3000);
       await takeScreenshot(paginaPrincipal, `modal-aberto-especial-${execucao}`);
       
-      // 🔥 CLICAR EM "EXPLORE ITENS SURPRESA" NA ABA PRINCIPAL
-      console.log('2. 🔍 Clicando em "Explore itens surpresa"...');
-      const tarefaEncontrada = await clicarTarefaEspecifica(paginaPrincipal, 'Explore itens surpresa');
+      // 🔥 CLICAR EM "BROWSE SURPRISE ITEMS" NA ABA PRINCIPAL
+      console.log('2. 🔍 Clicando em "Browse surprise items"...');
+      const tarefaEncontrada = await clicarTarefaEspecifica(paginaPrincipal, 'Browse surprise items');
       
       if (!tarefaEncontrada) {
-        console.log('❌ Tarefa "Explore itens surpresa" não encontrada');
+        console.log('❌ Tarefa "Browse surprise items" não encontrada');
         continue;
       }
       
@@ -978,7 +998,7 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
       }
     }
     
-    console.log('🎉 EXECUÇÃO ESPECIAL "EXPLORE ITENS SURPRESA" CONCLUÍDA!');
+    console.log('🎉 EXECUÇÃO ESPECIAL "BROWSE SURPRISE ITEMS" CONCLUÍDA!');
     
   } catch (error) {
     console.log('💥 Erro na execução especial:', error.message);
@@ -1001,3 +1021,5 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
 if (require.main === module) {
   botEventosReais().catch(console.error);
 }
+
+module.exports = { botEventosReais };
