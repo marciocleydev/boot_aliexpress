@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "description": "Bot para AliExpress em português",
   "main": "scripts/test-tarefas.js",
-  "type": "module",
   "scripts": {
     "start": "node scripts/test-tarefas.js",
     "github": "node scripts/test-tarefas.js"
