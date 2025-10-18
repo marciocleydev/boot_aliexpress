@@ -1,6 +1,6 @@
 //update-secret.js
 
-const { Octokit } = require("@octokit/rest");
+import { Octokit } from "@octokit/rest";
 const sodium = require("tweetsodium");
 const fs = require("fs");
 
