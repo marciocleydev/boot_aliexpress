@@ -51,10 +51,19 @@ async function takeScreenshot(page, description) {
 }
 
 async function botEventosReais() {
-  const userAgent = new UserAgent({ 
-    deviceCategory: 'mobile',
-    platform: isCI ? 'Linux' : 'Win32'
-  });
+  // 🔥 USER AGENT CORRIGIDO - SUBSTITUA APENAS ESTAS LINHAS
+  let userAgent;
+  try {
+    userAgent = new UserAgent({ 
+      deviceCategory: 'mobile'
+    });
+    console.log('📱 User Agent móvel configurado');
+  } catch (error) {
+    console.log('⚠️  Erro no user-agents, usando fallback...');
+    userAgent = {
+      toString: () => 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+    };
+  }
 
   console.log('🔧 Iniciando navegador...');
   const browser = await puppeteer.launch({
