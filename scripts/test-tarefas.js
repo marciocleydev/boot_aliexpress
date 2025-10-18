@@ -380,7 +380,7 @@ try {
     await takeScreenshot(page, 'apos-coletar-moedas');
     
     // 🔥 TEMPO LIMITE DE 2.5 MINUTOS (150 segundos)
-    const tempoLimite = 1.5 * 60 * 1000; // 2.5 minutos em milissegundos
+    const tempoLimite = 2.0 * 60 * 1000; // 2.5 minutos em milissegundos
     const inicio = Date.now();
     
     // 🔥 EXECUTAR LOOP POR ATÉ 4 MINUTOS
