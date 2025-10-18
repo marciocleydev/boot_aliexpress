@@ -10,8 +10,18 @@ const [owner, repoName] = repo.split("/");
 
 (async () => {
   try {
+
     console.log("📦 Lendo cookies atualizados...");
-    const cookies = fs.readFileSync("cookies_atualizados.json", "utf8");
+
+// Lê o arquivo de cookies
+const cookies = fs.readFileSync("cookies_atualizados.json", "utf8");
+
+// === ✅ CHECAGEM DE COOKIES VAZIOS ===
+if (!cookies || cookies.trim().length < 100 || cookies.trim() === "[]") {
+  console.log("⚠️ Cookies parecem vazios — ignorando atualização da secret.");
+  process.exit(0); // Sai silenciosamente sem erro
+}
+
 
     const octokit = new Octokit({ auth: token });
 
