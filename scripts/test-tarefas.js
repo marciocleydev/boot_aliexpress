@@ -1,4 +1,4 @@
-// bot-ali-github.js
+// scripts/test-tarefas.js
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
@@ -10,6 +10,47 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 console.log('🚀 BOT - Versão GitHub Actions (Português)');
 
+// 🔥 DETECTAR AMBIENTE
+const isCI = process.env.CI === 'true';
+
+// 🔥 CONFIGURAR PASTA DE SCREENSHOTS
+function setupScreenshotsDir() {
+  const screenshotsDir = path.join(process.cwd(), 'screenshots');
+  if (!fs.existsSync(screenshotsDir)) {
+    fs.mkdirSync(screenshotsDir, { recursive: true });
+    console.log('📁 Pasta screenshots criada:', screenshotsDir);
+  }
+  return screenshotsDir;
+}
+
+// 🔥 SISTEMA DE SCREENSHOTS MELHORADO
+let screenshotCount = 0;
+const screenshotsDir = setupScreenshotsDir();
+
+async function takeScreenshot(page, description) {
+  try {
+    screenshotCount++;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const safeDescription = description.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 50);
+    const filename = `${screenshotCount.toString().padStart(3, '0')}-${timestamp}-${safeDescription}.png`;
+    const filepath = path.join(screenshotsDir, filename);
+    
+    await page.screenshot({ 
+      path: filepath, 
+      fullPage: true,
+      type: 'png',
+      quality: 80
+    });
+    
+    console.log(`📸 Screenshot ${screenshotCount}: ${description}`);
+    console.log(`   📁 Salvo em: ${filename}`);
+    return filepath;
+  } catch (error) {
+    console.log(`❌ Erro ao tirar screenshot: ${error.message}`);
+    return null;
+  }
+}
+
 // 🔥 CONFIGURAÇÃO DE CREDENCIAIS
 const ALIEXPRESS_EMAIL = process.env.ALIEXPRESS_EMAIL;
 const ALIEXPRESS_PASSWORD = process.env.ALIEXPRESS_PASSWORD;
@@ -18,54 +59,13 @@ console.log('🔐 Configuração de login:');
 console.log('   Email:', ALIEXPRESS_EMAIL ? '*** Configurado ***' : 'Não configurado');
 console.log('   Senha:', ALIEXPRESS_PASSWORD ? '*** Configurada ***' : 'Não configurada');
 
-// 🔥 DETECTAR AMBIENTE
-const isCI = process.env.CI === 'true';
-
-// 🔥 SISTEMA DE SCREENSHOTS
-let screenshotCount = 0;
-const screenshotsDir = path.join(__dirname, 'screenshots');
-
-async function takeScreenshot(page, description) {
-  try {
-    // Criar diretório se não existir
-    if (!fs.existsSync(screenshotsDir)) {
-      fs.mkdirSync(screenshotsDir, { recursive: true });
-    }
-
-    screenshotCount++;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `screenshot-${screenshotCount}-${timestamp}-${description.replace(/[^a-zA-Z0-9]/g, '-')}.png`;
-    const filepath = path.join(screenshotsDir, filename);
-    
-    await page.screenshot({ 
-      path: filepath, 
-      fullPage: true,
-      type: 'png'
-    });
-    
-    console.log(`📸 Screenshot ${screenshotCount}: ${description} - ${filename}`);
-    return filepath;
-  } catch (error) {
-    console.log(`❌ Erro ao tirar screenshot: ${error.message}`);
-  }
-}
-
 async function botEventosReais() {
-  // 🔥 USER AGENT CORRIGIDO - SUBSTITUA APENAS ESTAS LINHAS
-  let userAgent;
-  try {
-    userAgent = new UserAgent({ 
-      deviceCategory: 'mobile'
-    });
-    console.log('📱 User Agent móvel configurado');
-  } catch (error) {
-    console.log('⚠️  Erro no user-agents, usando fallback...');
-    userAgent = {
-      toString: () => 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
-    };
-  }
+  // 🔥 USER AGENT SIMPLES
+  const userAgent = {
+    toString: () => 'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+  };
+  console.log('📱 User Agent móvel configurado');
 
-  console.log('🔧 Iniciando navegador...');
   const browser = await puppeteer.launch({
     headless: isCI ? true : false,
     executablePath: isCI ? '/usr/bin/google-chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -133,23 +133,23 @@ async function botEventosReais() {
   const tarefasMultiplas = new Set(['Veja os super descontos', 'Descubra itens patrocinados']);
 
   try {
- // === LOGIN ===
-  console.log('1. 🔐 Navegando para login...');
-  await page.goto('https://login.aliexpress.com/', { 
-  waitUntil: 'networkidle2',
-  timeout: 30000 
-});
-  await takeScreenshot(page, 'pagina-login');
-  await delay(4000);
+    // === LOGIN ===
+    console.log('1. 🔐 Navegando para login...');
+    await page.goto('https://login.aliexpress.com/', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000 
+    });
+    await takeScreenshot(page, 'pagina-login');
+    await delay(4000);
 
-// Email
-console.log('2. 📧 Inserindo email...');
-const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
-if (emailInput) {
-  await emailInput.type(ALIEXPRESS_EMAIL, { delay: 100 }); // 👈 VARIÁVEL AQUI
-  await takeScreenshot(page, 'email-inserido');
-  await delay(2000);
-  await page.keyboard.press('Tab');
+    // Email
+    console.log('2. 📧 Inserindo email...');
+    const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
+    if (emailInput) {
+      await emailInput.type(ALIEXPRESS_EMAIL, { delay: 100 });
+      await takeScreenshot(page, 'email-inserido');
+      await delay(2000);
+      await page.keyboard.press('Tab');
     }
 
     await delay(2000);
@@ -170,13 +170,13 @@ if (emailInput) {
 
     await delay(5000);
 
-// Senha
-console.log('4. 🔑 Inserindo senha...');
-const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
-if (senhaInput) {
-  await senhaInput.type(ALIEXPRESS_PASSWORD, { delay: 80 }); // 👈 VARIÁVEL AQUI
-  await takeScreenshot(page, 'senha-inserida');
-}
+    // Senha
+    console.log('4. 🔑 Inserindo senha...');
+    const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
+    if (senhaInput) {
+      await senhaInput.type(ALIEXPRESS_PASSWORD, { delay: 80 });
+      await takeScreenshot(page, 'senha-inserida');
+    }
 
     await delay(2000);
 
@@ -355,6 +355,23 @@ if (senhaInput) {
     console.error('💥 Erro:', error.message);
     await takeScreenshot(page, 'erro-critico');
   } finally {
+    // 🔥 VERIFICAR SCREENSHOTS ANTES DE FECHAR
+    console.log('\n📁 VERIFICANDO SCREENSHOTS SALVOS...');
+    try {
+      const files = fs.readdirSync(screenshotsDir);
+      console.log(`✅ ${files.length} screenshots salvos em: ${screenshotsDir}`);
+      if (files.length > 0) {
+        console.log('📄 Lista de screenshots:');
+        files.forEach(file => {
+          const filePath = path.join(screenshotsDir, file);
+          const stats = fs.statSync(filePath);
+          console.log(`   📸 ${file} (${(stats.size / 1024).toFixed(1)} KB)`);
+        });
+      }
+    } catch (error) {
+      console.log('❌ Nenhum screenshot encontrado ou erro ao listar:', error.message);
+    }
+    
     await browser.close();
     console.log('🔚 Navegador fechado.');
   }
@@ -515,7 +532,7 @@ async function executarExploreItensSurpresa(page, urlMoedas) {
       } catch (e) {
         console.log('Erro ao clicar no produto:', e);
         return false;
-      }
+        }
     }, i);
 
     if (clicked) {
@@ -957,5 +974,3 @@ async function executarExploreItensSurpresaFinal(page, urlMoedas) {
 if (require.main === module) {
   botEventosReais().catch(console.error);
 }
-
-module.exports = { botEventosReais, takeScreenshot };
