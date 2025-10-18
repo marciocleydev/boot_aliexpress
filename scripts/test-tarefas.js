@@ -10,6 +10,14 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 console.log('🚀 BOT - Versão GitHub Actions (Português)');
 
+// 🔥 CONFIGURAÇÃO DE CREDENCIAIS
+const ALIEXPRESS_EMAIL = process.env.ALIEXPRESS_EMAIL;
+const ALIEXPRESS_PASSWORD = process.env.ALIEXPRESS_PASSWORD;
+
+console.log('🔐 Configuração de login:');
+console.log('   Email:', ALIEXPRESS_EMAIL ? '*** Configurado ***' : 'Não configurado');
+console.log('   Senha:', ALIEXPRESS_PASSWORD ? '*** Configurada ***' : 'Não configurada');
+
 // 🔥 DETECTAR AMBIENTE
 const isCI = process.env.CI === 'true';
 
@@ -116,23 +124,23 @@ async function botEventosReais() {
   const tarefasMultiplas = new Set(['Veja os super descontos', 'Descubra itens patrocinados']);
 
   try {
-    // === LOGIN ===
-    console.log('1. 🔐 Navegando para login...');
-    await page.goto('https://login.aliexpress.com/', { 
-      waitUntil: 'networkidle2',
-      timeout: 30000 
-    });
-    await takeScreenshot(page, 'pagina-login');
-    await delay(4000);
+ // === LOGIN ===
+  console.log('1. 🔐 Navegando para login...');
+  await page.goto('https://login.aliexpress.com/', { 
+  waitUntil: 'networkidle2',
+  timeout: 30000 
+});
+  await takeScreenshot(page, 'pagina-login');
+  await delay(4000);
 
-    // Email
-    console.log('2. 📧 Inserindo email...');
-    const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
-    if (emailInput) {
-      await emailInput.type('marciocley100@gmail.com', { delay: 100 });
-      await takeScreenshot(page, 'email-inserido');
-      await delay(2000);
-      await page.keyboard.press('Tab');
+// Email
+console.log('2. 📧 Inserindo email...');
+const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
+if (emailInput) {
+  await emailInput.type(ALIEXPRESS_EMAIL, { delay: 100 }); // 👈 VARIÁVEL AQUI
+  await takeScreenshot(page, 'email-inserido');
+  await delay(2000);
+  await page.keyboard.press('Tab');
     }
 
     await delay(2000);
@@ -153,13 +161,13 @@ async function botEventosReais() {
 
     await delay(5000);
 
-    // Senha
-    console.log('4. 🔑 Inserindo senha...');
-    const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
-    if (senhaInput) {
-      await senhaInput.type('Aliexpress@81050050', { delay: 80 });
-      await takeScreenshot(page, 'senha-inserida');
-    }
+// Senha
+console.log('4. 🔑 Inserindo senha...');
+const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
+if (senhaInput) {
+  await senhaInput.type(ALIEXPRESS_PASSWORD, { delay: 80 }); // 👈 VARIÁVEL AQUI
+  await takeScreenshot(page, 'senha-inserida');
+}
 
     await delay(2000);
 
