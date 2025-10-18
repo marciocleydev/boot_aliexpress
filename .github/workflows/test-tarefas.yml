@@ -1,4 +1,4 @@
-name: boot test
+name: test-tarefas-automaticas
 
 on:
   schedule:
@@ -17,29 +17,13 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        # cache: 'npm'  # Remove até ter package-lock.json
 
     - name: 📦 Install dependencies
       run: |
-        npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth user-agents
-
-    - name: 🔧 Install Chrome and dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget gnupg
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-        sudo apt-get update
-        sudo apt-get install -y google-chrome-stable fonts-liberation libasound2t64
-
-    - name: 🌐 Configure Portuguese locale
-      run: |
-        sudo locale-gen pt_BR.UTF-8
-        sudo update-locale LANG=pt_BR.UTF-8
+        npm install
 
     - name: 🚀 Run AliExpress Bot
       env:
-        CI: true
         ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
         ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
       run: node scripts/test-tarefas.js
