@@ -1,8 +1,6 @@
-//update-secret.js
-
-const { Octokit } = require("@octokit/rest");
-const sodium = require("tweetsodium");
-const fs = require("fs");
+import { Octokit } from "@octokit/rest";
+import sodium from "tweetsodium";
+import fs from "fs";
 
 const token = process.env.GH_TOKEN;
 const repo = process.env.GITHUB_REPOSITORY;
@@ -10,18 +8,16 @@ const [owner, repoName] = repo.split("/");
 
 (async () => {
   try {
-
     console.log("📦 Lendo cookies atualizados...");
 
-// Lê o arquivo de cookies
-const cookies = fs.readFileSync("cookies_atualizados.json", "utf8");
+    // Lê o arquivo de cookies
+    const cookies = fs.readFileSync("cookies_atualizados.json", "utf8");
 
-// === ✅ CHECAGEM DE COOKIES VAZIOS ===
-if (!cookies || cookies.trim().length < 100 || cookies.trim() === "[]") {
-  console.log("⚠️ Cookies parecem vazios — ignorando atualização da secret.");
-  process.exit(0); // Sai silenciosamente sem erro
-}
-
+    // Checagem de cookies vazios
+    if (!cookies || cookies.trim().length < 100 || cookies.trim() === "[]") {
+      console.log("⚠️ Cookies parecem vazios — ignorando atualização da secret.");
+      process.exit(0);
+    }
 
     const octokit = new Octokit({ auth: token });
 
