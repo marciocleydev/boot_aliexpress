@@ -469,6 +469,20 @@ async function botEventosReais() {
       console.log('❌ Nenhum screenshot encontrado ou erro ao listar:', error.message);
     }
     
+
+
+    // === SALVAR COOKIES ATUALIZADOS ===
+try {
+  const cookies = await page.cookies();
+  fs.writeFileSync('cookies_atualizados.json', JSON.stringify(cookies, null, 2));
+  console.log('🍪 Cookies atualizados salvos localmente!');
+} catch (e) {
+  console.log('⚠️ Erro ao salvar cookies atualizados:', e.message);
+}
+
+
+    
+    
     await browser.close();
     console.log('🔚 Navegador fechado.');
   }
