@@ -17,6 +17,7 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        # cache: 'npm'  # Remove até ter package-lock.json
 
     - name: 📦 Install dependencies
       run: |
@@ -25,7 +26,11 @@ jobs:
     - name: 🔧 Install Chrome and dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y google-chrome-stable fonts-liberation libasound2
+        sudo apt-get install -y wget gnupg
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable fonts-liberation libasound2t64
 
     - name: 🌐 Configure Portuguese locale
       run: |
