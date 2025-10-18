@@ -37,9 +37,8 @@ async function takeScreenshot(page, description) {
     
     await page.screenshot({ 
       path: filepath, 
-      fullPage: true,
-      type: 'png',
-      quality: 80
+      fullPage: true
+      // REMOVE: type: 'png', quality: 80  ← PNG não suporta quality
     });
     
     console.log(`📸 Screenshot ${screenshotCount}: ${description}`);
@@ -67,7 +66,7 @@ async function botEventosReais() {
   console.log('📱 User Agent móvel configurado');
 
   const browser = await puppeteer.launch({
-    headless: isCI ? true : false,
+    headless: isCI ? new : false,
     executablePath: isCI ? '/usr/bin/google-chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     defaultViewport: {
       width: 390,
