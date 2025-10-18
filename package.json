@@ -1,15 +1,20 @@
+
 {
-  "name": "aliexpress-coin-bot",
-  "version": "2.0.0",
-  "description": "Bot completo para coletar moedas e fazer tarefas do AliExpress",
+  "name": "bot-aliexpress",
+  "version": "1.0.0",
+  "description": "Bot para AliExpress em português",
   "main": "scripts/bot-ali-gh-actions.js",
   "scripts": {
-    "start": "node scripts/bot-ali-gh-actions.js"
+    "start": "node scripts/bot-ali-gh-actions.js",
+    "github": "node scripts/bot-ali-gh-actions.js"
   },
   "dependencies": {
+    "puppeteer": "^21.0.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "user-agents": "^1.0.559",
-    "puppeteer": "^21.0.0"
+    "user-agents": "^1.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
