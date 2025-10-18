@@ -129,30 +129,72 @@ async function carregarCookiesDaSecret(page) {
   }
 }
 
-// 🔥 VERIFICAR SE ESTÁ LOGADO
-async function verificarSeEstaLogado(page) {
+// 🔥 FUNÇÃO PARA LOGIN MANUAL
+async function fazerLoginManual(page) {
   try {
-    await page.goto('https://www.aliexpress.com', { 
+    console.log('🔐 Fazendo login manual...');
+    await page.goto('https://login.aliexpress.com/', { 
       waitUntil: 'networkidle2',
-      timeout: 10000 
+      timeout: 30000 
     });
-    
-    const estaLogado = await page.evaluate(() => {
-      // Verifica se há elementos que indicam que está logado
-      const elementosLogado = [
-        document.querySelector('[data-role="user-nickname"]'),
-        document.querySelector('.user-account'),
-        document.querySelector('[class*="user-info"]'),
-        document.querySelector('[href*="member"]')
-      ];
-      
-      return elementosLogado.some(el => el !== null);
+    await takeScreenshot(page, 'pagina-login');
+    await delay(4000);
+
+    // Email
+    console.log('📧 Inserindo email...');
+    const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
+    if (emailInput) {
+      await emailInput.type(ALIEXPRESS_EMAIL, { delay: 100 });
+      await takeScreenshot(page, 'email-inserido');
+      await delay(2000);
+      await page.keyboard.press('Tab');
+    }
+
+    await delay(2000);
+
+    const continueBtn = await page.evaluateHandle(() => {
+      const botoes = Array.from(document.querySelectorAll('button'));
+      return botoes.find(btn => {
+        const texto = btn.textContent?.toLowerCase() || '';
+        return texto.includes('continue') || texto.includes('continuar');
+      });
     });
+    if (continueBtn.asElement()) {
+      await continueBtn.asElement().click();
+      await takeScreenshot(page, 'clicou-continuar');
+    }
+
+    await delay(5000);
+
+    const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
+    if (senhaInput) {
+      await senhaInput.type(ALIEXPRESS_PASSWORD, { delay: 80 });
+      await takeScreenshot(page, 'senha-inserida');
+    }
+
+    await delay(2000);
+
+    const signInBtn = await page.evaluateHandle(() => {
+      const botoes = Array.from(document.querySelectorAll('button'));
+      return botoes.find(btn => {
+        const texto = btn.textContent?.toLowerCase() || '';
+        return texto.includes('sign in') || texto.includes('login') || texto.includes('entrar');
+      });
+    });
+    if (signInBtn.asElement()) {
+      await signInBtn.asElement().click();
+      await takeScreenshot(page, 'clicou-login');
+    }
+
+    console.log('⏳ Aguardando login... 15 segundos');
+    await delay(15000);
+    await takeScreenshot(page, 'apos-login');
+
+    console.log('✅ Login manual concluído!');
     
-    return estaLogado;
   } catch (error) {
-    console.log('❌ Erro ao verificar login:', error.message);
-    return false;
+    console.log('❌ Erro no login manual:', error.message);
+    throw error;
   }
 }
 
@@ -229,94 +271,31 @@ async function botEventosReais() {
     console.log('1. 🍪 Tentando autenticação com cookies...');
     const cookiesCarregados = await carregarCookiesDaSecret(page);
     
-    let loginRealizado = false;
-    
     if (cookiesCarregados) {
-      await takeScreenshot(page, 'cookies-carregados');
+      console.log('✅ Cookies carregados, indo direto para moedas...');
       
-      // Verificar se está logado
-      console.log('🔍 Verificando se está autenticado...');
-      const estaLogado = await verificarSeEstaLogado(page);
-      
-      if (estaLogado) {
-        console.log('✅ AUTENTICADO COM SUCESSO VIA COOKIES!');
-        console.log('🚀 Pulando etapa de login...');
-        loginRealizado = true;
-        await takeScreenshot(page, 'autenticado-com-cookies');
-      } else {
-        console.log('❌ Cookies não funcionaram, fazendo login normal...');
+      try {
+        await page.goto(URL_MOEDAS, {
+          waitUntil: 'domcontentloaded',
+          timeout: 15000
+        });
+        
+        await delay(5000);
+        await takeScreenshot(page, 'tentativa-moedas-com-cookies');
+        
+        // Se chegou aqui sem erro, assumimos que está logado
+        console.log('🚀 AUTENTICADO COM SUCESSO VIA COOKIES!');
+        
+      } catch (error) {
+        console.log('❌ Erro ao acessar moedas com cookies, fazendo login manual...');
+        await fazerLoginManual(page);
       }
+      
     } else {
       console.log('❌ Nenhum cookie disponível, fazendo login normal...');
+      await fazerLoginManual(page);
     }
 
-    // === LOGIN NORMAL (SE OS COOKIES FALHAREM) ===
-    if (!loginRealizado) {
-      console.log('2. 🔐 Fazendo login manual...');
-      await page.goto('https://login.aliexpress.com/', { 
-        waitUntil: 'networkidle2',
-        timeout: 30000 
-      });
-      await takeScreenshot(page, 'pagina-login');
-      await delay(4000);
-
-      // Email
-      console.log('3. 📧 Inserindo email...');
-      const emailInput = await page.waitForSelector('input[type="email"], input[type="text"]', { timeout: 5000 });
-      if (emailInput) {
-        await emailInput.type(ALIEXPRESS_EMAIL, { delay: 100 });
-        await takeScreenshot(page, 'email-inserido');
-        await delay(2000);
-        await page.keyboard.press('Tab');
-      }
-
-      await delay(2000);
-
-      const continueBtn = await page.evaluateHandle(() => {
-        const botoes = Array.from(document.querySelectorAll('button'));
-        return botoes.find(btn => {
-          const texto = btn.textContent?.toLowerCase() || '';
-          return texto.includes('continue') || texto.includes('continuar');
-        });
-      });
-      if (continueBtn.asElement()) {
-        await continueBtn.asElement().click();
-        await takeScreenshot(page, 'clicou-continuar');
-      }
-
-      await delay(5000);
-
-      const senhaInput = await page.waitForSelector('input[type="password"]', { timeout: 5000 });
-      if (senhaInput) {
-        await senhaInput.type(ALIEXPRESS_PASSWORD, { delay: 80 });
-        await takeScreenshot(page, 'senha-inserida');
-      }
-
-      await delay(2000);
-
-      const signInBtn = await page.evaluateHandle(() => {
-        const botoes = Array.from(document.querySelectorAll('button'));
-        return botoes.find(btn => {
-          const texto = btn.textContent?.toLowerCase() || '';
-          return texto.includes('sign in') || texto.includes('login') || texto.includes('entrar');
-        });
-      });
-      if (signInBtn.asElement()) {
-        await signInBtn.asElement().click();
-        await takeScreenshot(page, 'clicou-login');
-      }
-
-      console.log('⏳ Aguardando login... 15 segundos');
-      await delay(15000);
-      await takeScreenshot(page, 'apos-login');
-    }
-
-    // === PÓS-AUTENTICAÇÃO (APÓS COOKIES OU LOGIN MANUAL) ===
-    console.log('4. 🪙 Indo para moedas...');
-    await page.goto(URL_MOEDAS, {
-      waitUntil: 'networkidle2',
-      timeout: 20000
-    });
     await takeScreenshot(page, 'pagina-moedas');
 
     // Remover popup de senha
@@ -327,7 +306,7 @@ async function botEventosReais() {
     await delay(3000);
 
     // === ESTRATÉGIA COM TEMPO LIMITE DE 4 MINUTOS ===
-    console.log('5. 🔥 Iniciando execução com tempo limite de 4 minutos...\n');
+    console.log('3. 🔥 Iniciando execução com tempo limite de 4 minutos...\n');
     
     // 🔥 COLETAR MOEDAS DIÁRIAS SE DISPONÍVEL
     await coletarMoedasDiarias(page);
@@ -1130,4 +1109,4 @@ if (require.main === module) {
   botEventosReais().catch(console.error);
 }
 
-module.exports = { botEventosReais };
+module.exports = { botEventosRealis };
