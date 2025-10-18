@@ -491,17 +491,19 @@ async function executarTarefaEspecifica(page, tarefa, urlMoedas) {
   }
 }
 
-// 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - INGLÊS
+
+
+// 🔥 EXECUTAR BROWSE SURPRISE ITEMS (MELHORADO) - INGLÊS - AGORA 4 PRODUTOS
 async function executarBrowseSurpriseItems(page, urlMoedas) {
-  console.log('   🎁 Executando browse surprise items (3 produtos)...');
+  console.log('   🎁 Executando browse surprise items (4 produtos)...');
   
   // 🔥 AGUARDAR PÁGINA CARREGAR COMPLETAMENTE
   console.log('   ⏳ Aguardando carregamento da página...');
   await delay(6000);
   await takeScreenshot(page, 'browse-items-carregado');
   
-  // 🔥 CLICA EM 3 PRODUTOS DIFERENTES
-  for (let i = 1; i <= 3; i++) {
+  // 🔥 CLICA EM 4 PRODUTOS DIFERENTES (ALTERADO DE 3 PARA 4)
+  for (let i = 1; i <= 4; i++) {
     console.log(`   👆 Procurando ${i}º produto...`);
     
     const clicked = await page.evaluate((index) => {
@@ -558,10 +560,14 @@ async function executarBrowseSurpriseItems(page, urlMoedas) {
     }
   }
   
-  // 🔥 VOLTA PARA MOEDAS APÓS OS 3 PRODUTOS
+  // 🔥 VOLTA PARA MOEDAS APÓS OS 4 PRODUTOS
   console.log('   🔄 Voltando para moedas...');
   await voltarParaMoedas(page, urlMoedas);
 }
+
+
+
+
 
 // 🔥 EXECUTAR PESQUISA - INGLÊS
 async function executarPesquisa(page, urlMoedas) {
@@ -868,12 +874,12 @@ async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
         continue;
       }
       
-      console.log('4. 🎯 Clicando em 3 produtos...');
+      console.log('4. 🎯 Clicando em 4 produtos...');
       
       const produtosClicados = new Set();
       
-      for (let i = 1; i <= 3; i++) {
-        console.log(`   📦 Procurando produto ${i}/3...`);
+      for (let i = 1; i <= 4; i++) {
+        console.log(`   📦 Procurando produto ${i}/4...`);
         
         let produtoEncontrado = false;
         
@@ -906,7 +912,7 @@ async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
         if (resultado.success) {
           produtoEncontrado = true;
           produtosClicados.add(i);
-          console.log(`   ✅ Produto ${i}/3 clicado!`);
+          console.log(`   ✅ Produto ${i}/4 clicado!`);
           
           // 🔥 AGUARDA NA NOVA ABA
           console.log('   ⏳ Aguardando 8s...');
@@ -937,7 +943,7 @@ async function executarBrowseSurpriseItemsFinal(page, urlMoedas) {
           await takeScreenshot(novaAba, `volta-lista-${i}-${execucao}`);
           
           // 🔥 FAZ SCROLL NA NOVA ABA
-          if (i < 3) {
+          if (i < 4) {
             await novaAba.evaluate(() => {
               window.scrollBy(0, 400);
             });
