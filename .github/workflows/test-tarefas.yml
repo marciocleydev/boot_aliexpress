@@ -1,49 +1,56 @@
-name: Bot AliExpress
+name: boot test
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 8 * * *'  # Executa todo dia às 8h UTC
+    - cron: '0 7 * * *'  # 7:00 AM UTC (4:00 AM BRT)
+  workflow_dispatch:
 
 jobs:
-  run-bot:
+  collect-coins:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout código
-      uses: actions/checkout@v3
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - name: ⎔ Setup Node.js
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
 
-    - name: Instalar dependências
-      run: npm install
+    - name: 📦 Install dependencies
+      run: |
+        npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth user-agents
 
-    - name: Instalar Chrome
+    - name: 🔧 Install Chrome and dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y google-chrome-stable
+        sudo apt-get install -y google-chrome-stable fonts-liberation libasound2
 
-    - name: Configurar locale pt-BR
+    - name: 🌐 Configure Portuguese locale
       run: |
         sudo locale-gen pt_BR.UTF-8
-        echo "LC_ALL=pt_BR.UTF-8" >> $GITHUB_ENV
-        echo "LANG=pt_BR.UTF-8" >> $GITHUB_ENV
-        echo "LANGUAGE=pt_BR:pt:en" >> $GITHUB_ENV
+        sudo update-locale LANG=pt_BR.UTF-8
 
-    - name: Executar bot
+    - name: 🚀 Run AliExpress Bot
       env:
         CI: true
+        ALIEXPRESS_EMAIL: ${{ secrets.ALIEXPRESS_EMAIL }}
+        ALIEXPRESS_PASSWORD: ${{ secrets.ALIEXPRESS_PASSWORD }}
       run: node scripts/test-tarefas.js
 
-    - name: Upload logs (opcional)
+    - name: 📤 Upload screenshots
+      uses: actions/upload-artifact@v4
       if: always()
-      uses: actions/upload-artifact@v3
       with:
-        name: bot-logs
-        path: |
-          *.log
-        retention-days: 1
+        name: bot-screenshots
+        path: screenshots/
+        retention-days: 7
+
+    - name: 📋 Show summary
+      if: always()
+      run: |
+        echo "✅ Execução do bot finalizada!"
+        echo "📸 Screenshots disponíveis para download acima"
+        echo "🔄 Próxima execução: 7:00 AM UTC"
