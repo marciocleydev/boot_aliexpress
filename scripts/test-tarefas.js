@@ -471,11 +471,19 @@ async function botEventosReais() {
     
 
 
-    // === SALVAR COOKIES ATUALIZADOS ===
+// 🔥 SALVAR COOKIES ATUALIZADOS (CORRIGIDO)
 try {
+  // Aguarda um pouco antes de salvar
+  await delay(2000);
+  
   const cookies = await page.cookies();
-  fs.writeFileSync('cookies_atualizados.json', JSON.stringify(cookies, null, 2));
-  console.log('🍪 Cookies atualizados salvos localmente!');
+  if (cookies && cookies.length > 0) {
+    fs.writeFileSync('cookies_atualizados.json', JSON.stringify(cookies, null, 2));
+    console.log('🍪 Cookies atualizados salvos localmente!');
+    console.log(`📊 ${cookies.length} cookies salvos`);
+  } else {
+    console.log('⚠️ Nenhum cookie encontrado para salvar');
+  }
 } catch (e) {
   console.log('⚠️ Erro ao salvar cookies atualizados:', e.message);
 }
