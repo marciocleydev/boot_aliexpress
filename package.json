@@ -12,7 +12,9 @@
     "puppeteer": "^21.0.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "user-agents": "^1.1.1"
+    "user-agents": "^1.1.1",
+    "@octokit/rest": "^21.0.1",
+    "tweetsodium": "^0.0.5"
   },
   "engines": {
     "node": ">=18.0.0"
